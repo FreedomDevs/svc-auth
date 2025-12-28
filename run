@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -e
+
+MODE="$1"
+shift || true   # чтобы можно было передавать дополнительные аргументы, если нужно
+
+BUILD_TYPE="Debug"
+MARCH_NATIVE=""
+GDB=0
+
+case "$MODE" in
+    build)
+        BUILD_TYPE="Release"
+        ;;
+    native)
+        BUILD_TYPE="Native"
+        ;;
+    cmake)
+        BUILD_TYPE="Debug"
+        ;;
+    run)
+        BUILD_TYPE="Debug"
+        GDB=1
+        ;;
+    *)
+        echo "Unknown mode: $MODE"
+        echo "Usage: $0 {build|native|cmake|run}"
+        exit 1
+        ;;
+esac
+
+cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+cmake --build build -j$(nproc)
+
+if [[ $GDB -eq 1 ]]; then
+    cd build
+    gdb --batch -ex run -ex bt -ex quit --args ./svc-auth
+fi
+
