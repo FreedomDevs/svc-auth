@@ -8,6 +8,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+add_subdirectory(libs/drogon)
+
 # Добавляем include/ как include
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
@@ -15,3 +17,5 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 add_executable(svc-auth ${SOURCES})
+
+target_link_libraries(svc-auth PRIVATE drogon)
