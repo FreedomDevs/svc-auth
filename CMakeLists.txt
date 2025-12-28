@@ -1,0 +1,17 @@
+cmake_minimum_required(VERSION 4.2.0)
+project(svc-auth VERSION 1.0 LANGUAGES CXX)
+
+# Экспортируем инструкцию по сборке проекта для всяких IDE
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# Используем C++ 2023
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Добавляем include/ как include
+include_directories(${PROJECT_SOURCE_DIR}/include)
+
+# Компилируем все .cpp файлы в src
+file(GLOB_RECURSE SOURCES "src/*.cpp")
+
+add_executable(svc-auth ${SOURCES})
