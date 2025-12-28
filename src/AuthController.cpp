@@ -15,6 +15,7 @@ public:
   ADD_METHOD_TO(AuthController::registerEndpoint, "/auth/register", Post);
   ADD_METHOD_TO(AuthController::loginEndpoint, "/auth/login", Post);
   ADD_METHOD_TO(AuthController::refreshEndpoint, "/auth/refresh", Post);
+  ADD_METHOD_TO(AuthController::popGameTokenEndpoint, "/auth/pop_game_token", Post);
   METHOD_LIST_END
 
   void registerEndpoint(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
@@ -146,7 +147,51 @@ public:
     Json::Value res;
     std::vector<char> refreshTokenData = utils::base64DecodeToVector(refreshTokenString);
 
-    res["token"] = createTokenForUser(uuid);
+    uint64_t token = createTokenForUser(uuid);
+    uint8_t *bytes = reinterpret_cast<uint8_t *>(&token);
+    res["token"] = utils::base64Encode(bytes, 8);
+
+    auto resp = HttpResponse::newHttpJsonResponse(std::move(res));
+    callback(resp);
+  }
+
+  void popGameTokenEndpoint(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
+    LOG_INFO << "connected:" << (request->connected() ? "true" : "false");
+
+    auto jsonPtr = request->jsonObject();
+    if (jsonPtr == nullptr) {
+      auto resp = HttpResponse::newHttpResponse();
+      // #TODO нормальный формат ответов
+      resp->setBody("Couldn't read json from response");
+      callback(resp);
+      return;
+    }
+
+    auto gameToken = jsonPtr->get("game_token", Json::nullValue);
+    if (gameToken == Json::nullValue || !gameToken.isString()) {
+      auto resp = HttpResponse::newHttpResponse();
+      // #TODO нормальный формат ответов
+      resp->setBody("Refresh token not defined or it is not string");
+      callback(resp);
+      return;
+    }
+
+    std::vector<char> gameTokenVector = utils::base64DecodeToVector(gameToken.asString());
+    if (gameTokenVector.size() != 8) {
+      auto resp = HttpResponse::newHttpResponse();
+      // #TODO нормальный формат ответов
+      resp->setBody("Token invalid format, length ");
+      callback(resp);
+      return;
+    }
+
+    uint64_t token = 0;
+    std::memcpy(&token, gameTokenVector.data(), sizeof(uint64_t));
+
+    UUID uuid = UUID::fromString("372d8631-754c-47d5-9465-4efa4fd3b0e5");
+
+    Json::Value res;
+    res["result"] = popToken(token, uuid);
 
     auto resp = HttpResponse::newHttpJsonResponse(std::move(res));
     callback(resp);
