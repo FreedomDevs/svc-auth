@@ -41,9 +41,6 @@ int main() {
       })
       .setAfterAcceptSockOptCallback([](int) {});
 
-  LOG_INFO << "Server running on all interfaces: 0.0.0.0 and :: on port 9007";
-
-  app().addListener("::", 9007);
-
-  app().run();
+  LOG_INFO << "Server running on all interfaces: *:9007";
+  app().addListener("::", 9007).run();
 }

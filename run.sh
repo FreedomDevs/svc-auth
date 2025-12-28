@@ -1,3 +1,3 @@
 #!/bin/sh
 cd build
-./svc-auth
+gdb --batch -ex run -ex bt -ex quit --args ./svc-auth
