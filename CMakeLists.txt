@@ -8,6 +8,17 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
+    set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+    set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+endif()
+
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -flto -fno-exceptions -fno-rtti")
+set(CMAKE_CXX_FLAGS_NATIVE "-O3 -DNDEBUG -flto -fno-exceptions -fno-rtti -march=native")
+
 add_subdirectory(libs/drogon)
 
 # Добавляем include/ как include
@@ -18,4 +29,5 @@ file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 add_executable(svc-auth ${SOURCES})
 
+target_compile_options(svc-auth PRIVATE -Wall -Wextra -Wpedantic)
 target_link_libraries(svc-auth PRIVATE drogon)
