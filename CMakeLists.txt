@@ -16,9 +16,15 @@ if(CCACHE_PROGRAM)
 endif()
 
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -flto -fno-exceptions -fno-rtti")
-set(CMAKE_CXX_FLAGS_NATIVE "-O3 -DNDEBUG -flto -fno-exceptions -fno-rtti -march=native")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -flto")
+set(CMAKE_CXX_FLAGS_NATIVE "-O3 -DNDEBUG -flto -march=native")
 
+
+set(BUILD_EXAMPLES OFF)
+set(BUILD_CTL OFF)
+set(BUILD_ORM OFF)
+set(BUILD_BROTLI OFF)
+set(BUILD_YAML_CONFIG OFF)
 add_subdirectory(libs/drogon)
 
 # Добавляем include/ как include

@@ -11,6 +11,10 @@ std::unordered_map<UUID, uint64_t> uuidIndex;
 
 std::mutex globalMutex;
 
+std::chrono::steady_clock::time_point lastGcTime{}; // нулевая дата
+
+const auto MAX_TOKENS_BEFORE_GC = 500;
+
 uint64_t generateToken() {
   uint64_t token = 0; // Создаём переменную с токеном
 
@@ -25,11 +29,11 @@ uint64_t generateToken() {
 
 uint64_t createTokenForUser(const UUID &userUUID) {
   std::unique_lock<std::mutex> lock(globalMutex);
+  auto now = std::chrono::steady_clock::now();
 
   if (uuidIndex.count(userUUID)) {
     uint64_t old_token = uuidIndex[userUUID];
 
-    auto now = std::chrono::steady_clock::now();
     if (now <= tokenIndex.at(old_token).expiry)
       LOG_WARN << "Пользоватесь " << userUUID.toString() << " сгенерировал новый токен, но он уже существовал, перегенерация";
 
@@ -38,11 +42,16 @@ uint64_t createTokenForUser(const UUID &userUUID) {
   }
 
   // Создаём переменную, TTL у нас 10 секунд
-  Token token = Token(generateToken(), userUUID, std::chrono::steady_clock::now() + std::chrono::seconds(10));
+  Token token = Token(generateToken(), userUUID, now + std::chrono::seconds(10));
   uint64_t key = token.value;
+
+  if (tokenIndex.size() > MAX_TOKENS_BEFORE_GC && now - lastGcTime > std::chrono::seconds(5))
+    runTokenGC();
 
   tokenIndex.emplace(key, token);
   uuidIndex.emplace(userUUID, key);
+
+  lock.unlock();
   return key;
 }
 
@@ -78,8 +87,8 @@ bool popToken(const uint64_t &token, const UUID &userUUID) {
   return true;
 }
 
+// ДОЛЖЕН ВЫЗЫВАТСЯ ПОД МЬЮТЕКСОМ УЖЕ
 void runTokenGC() {
-  std::unique_lock<std::mutex> lock(globalMutex);
   auto now = std::chrono::steady_clock::now();
   int deleted_count = 0;
 
@@ -93,6 +102,5 @@ void runTokenGC() {
     }
   }
 
-  lock.unlock();
   LOG_INFO << "Выполнен GC токенов игры, было удалено " << deleted_count << " токенов";
 }
