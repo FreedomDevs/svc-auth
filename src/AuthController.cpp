@@ -1,6 +1,9 @@
 #include "drogon/HttpController.h"
 #include "drogon/utils/Utilities.h"
+#include "services/minecraftTokenServices.hpp"
+#include "services/uuidUtils.hpp"
 #include <drogon/drogon.h>
+#include <endian.h>
 #include <json/config.h>
 #include <json/value.h>
 #include <utility>
@@ -14,9 +17,7 @@ public:
   ADD_METHOD_TO(AuthController::refreshEndpoint, "/auth/refresh", Post);
   METHOD_LIST_END
 
-  void
-  registerEndpoint(const HttpRequestPtr &request,
-                   std::function<void(const HttpResponsePtr &)> &&callback) {
+  void registerEndpoint(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
     LOG_INFO << "connected:" << (request->connected() ? "true" : "false");
 
     auto jsonPtr = request->jsonObject();
@@ -58,8 +59,7 @@ public:
     callback(resp);
   }
 
-  void loginEndpoint(const HttpRequestPtr &request,
-                     std::function<void(const HttpResponsePtr &)> &&callback) {
+  void loginEndpoint(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
     LOG_INFO << "connected:" << (request->connected() ? "true" : "false");
 
     auto jsonPtr = request->jsonObject();
@@ -101,9 +101,7 @@ public:
     callback(resp);
   }
 
-  void
-  refreshEndpoint(const HttpRequestPtr &request,
-                  std::function<void(const HttpResponsePtr &)> &&callback) {
+  void refreshEndpoint(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
     LOG_INFO << "connected:" << (request->connected() ? "true" : "false");
 
     auto jsonPtr = request->jsonObject();
@@ -143,13 +141,12 @@ public:
       return;
     }
 
-    Json::Value res;
-    std::vector<char> refreshTokenData =
-        utils::base64DecodeToVector(refreshTokenString);
+    UUID uuid = UUID::fromString("372d8631-754c-47d5-9465-4efa4fd3b0e5");
 
-    std::vector<unsigned char> random(8);
-    utils::secureRandomBytes(random.data(), random.size());
-    res["token"] = utils::base64Encode(random.data(), random.size());
+    Json::Value res;
+    std::vector<char> refreshTokenData = utils::base64DecodeToVector(refreshTokenString);
+
+    res["token"] = createTokenForUser(uuid);
 
     auto resp = HttpResponse::newHttpJsonResponse(std::move(res));
     callback(resp);
