@@ -6,6 +6,14 @@
 
 class ResponseHandler {
 public:
-  static drogon::HttpResponsePtr success(int statusCode, const std::string &message, Codes::Code code, const Json::Value &data = Json::nullValue);
+  static drogon::HttpResponsePtr success(const drogon::HttpRequestPtr &req, const std::string &message, Codes::Code code,
+                                         const Json::Value &data = Json::nullValue);
+
+  static drogon::HttpResponsePtr success(const drogon::HttpRequestPtr &req, Codes::Code code, const Json::Value &data = Json::nullValue);
+
   static drogon::HttpResponsePtr error(int statusCode, const std::string &message, Codes::Code code);
+
+private:
+  static drogon::HttpResponsePtr successImpl(const drogon::HttpRequestPtr &req, const std::string &message, Codes::Code code, const Json::Value &data);
+  static std::string currentTime();
 };
