@@ -12,15 +12,13 @@ using namespace drogon;
 class AuthController : public HttpController<AuthController> {
 public:
   METHOD_LIST_BEGIN
-  ADD_METHOD_TO(AuthController::registerEndpoint, "/auth/register", Post, "TraceIdMiddleware");
-  ADD_METHOD_TO(AuthController::loginEndpoint, "/auth/login", Post, "TraceIdMiddleware");
-  ADD_METHOD_TO(AuthController::refreshEndpoint, "/auth/refresh", Post, "TraceIdMiddleware");
-  ADD_METHOD_TO(AuthController::popGameTokenEndpoint, "/auth/pop_game_token", Post, "TraceIdMiddleware");
+  ADD_METHOD_TO(AuthController::registerEndpoint, "/auth/register", Post, "TraceIdMiddleware", "LoggerMiddleware");
+  ADD_METHOD_TO(AuthController::loginEndpoint, "/auth/login", Post, "TraceIdMiddleware", "LoggerMiddleware");
+  ADD_METHOD_TO(AuthController::refreshEndpoint, "/auth/refresh", Post, "TraceIdMiddleware", "LoggerMiddleware");
+  ADD_METHOD_TO(AuthController::popGameTokenEndpoint, "/auth/pop_game_token", Post, "TraceIdMiddleware", "LoggerMiddleware");
   METHOD_LIST_END
 
   void registerEndpoint(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
-    LOG_INFO << "connected:" << (request->connected() ? "true" : "false");
-
     auto jsonPtr = request->jsonObject();
     if (jsonPtr == nullptr) {
       auto resp = HttpResponse::newHttpResponse();
@@ -61,8 +59,6 @@ public:
   }
 
   void loginEndpoint(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
-    LOG_INFO << "connected:" << (request->connected() ? "true" : "false");
-
     auto jsonPtr = request->jsonObject();
     if (jsonPtr == nullptr) {
       auto resp = HttpResponse::newHttpResponse();
@@ -103,8 +99,6 @@ public:
   }
 
   void refreshEndpoint(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
-    LOG_INFO << "connected:" << (request->connected() ? "true" : "false");
-
     auto jsonPtr = request->jsonObject();
     if (jsonPtr == nullptr) {
       auto resp = HttpResponse::newHttpResponse();
@@ -156,8 +150,6 @@ public:
   }
 
   void popGameTokenEndpoint(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
-    LOG_INFO << "connected:" << (request->connected() ? "true" : "false");
-
     auto jsonPtr = request->jsonObject();
     if (jsonPtr == nullptr) {
       auto resp = HttpResponse::newHttpResponse();
