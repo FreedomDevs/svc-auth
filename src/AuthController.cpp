@@ -1,8 +1,8 @@
-#include "drogon/HttpController.h"
-#include "drogon/utils/Utilities.h"
 #include "services/minecraftTokenServices.hpp"
 #include "services/uuidUtils.hpp"
+#include <drogon/HttpController.h>
 #include <drogon/drogon.h>
+#include <drogon/utils/Utilities.h>
 #include <endian.h>
 #include <json/config.h>
 #include <json/value.h>
@@ -12,10 +12,10 @@ using namespace drogon;
 class AuthController : public HttpController<AuthController> {
 public:
   METHOD_LIST_BEGIN
-  ADD_METHOD_TO(AuthController::registerEndpoint, "/auth/register", Post);
-  ADD_METHOD_TO(AuthController::loginEndpoint, "/auth/login", Post);
-  ADD_METHOD_TO(AuthController::refreshEndpoint, "/auth/refresh", Post);
-  ADD_METHOD_TO(AuthController::popGameTokenEndpoint, "/auth/pop_game_token", Post);
+  ADD_METHOD_TO(AuthController::registerEndpoint, "/auth/register", Post, "TraceIdMiddleware");
+  ADD_METHOD_TO(AuthController::loginEndpoint, "/auth/login", Post, "TraceIdMiddleware");
+  ADD_METHOD_TO(AuthController::refreshEndpoint, "/auth/refresh", Post, "TraceIdMiddleware");
+  ADD_METHOD_TO(AuthController::popGameTokenEndpoint, "/auth/pop_game_token", Post, "TraceIdMiddleware");
   METHOD_LIST_END
 
   void registerEndpoint(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
