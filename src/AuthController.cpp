@@ -9,7 +9,6 @@
 #include <endian.h>
 #include <json/config.h>
 #include <json/value.h>
-#include <utility>
 using namespace drogon;
 
 class AuthController : public HttpController<AuthController> {
@@ -22,11 +21,33 @@ public:
   METHOD_LIST_END
 
   void registerEndpoint(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
-    handleLoginPassword(request, std::move(callback));
+    std::string login, password;
+    if (!handleLoginPassword(request, login, password, callback))
+      return;
+
+    Json::Value res;
+    std::vector<unsigned char> random(32);
+    utils::secureRandomBytes(random.data(), random.size());
+
+    res["refresh_token"] = utils::base64Encode(random.data(), random.size());
+    res["access_token"] = utils::base64Encode(random.data(), random.size());
+
+    callback(ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res));
   }
 
   void loginEndpoint(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
-    handleLoginPassword(request, std::move(callback));
+    std::string login, password;
+    if (!handleLoginPassword(request, login, password, callback))
+      return;
+
+    Json::Value res;
+    std::vector<unsigned char> random(32);
+    utils::secureRandomBytes(random.data(), random.size());
+
+    res["refresh_token"] = utils::base64Encode(random.data(), random.size());
+    res["access_token"] = utils::base64Encode(random.data(), random.size());
+
+    callback(ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res));
   }
 
   void refreshEndpoint(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
@@ -85,27 +106,16 @@ public:
   }
 
 private:
-  void handleLoginPassword(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
-    auto &cb = callback;
-    const Json::Value *json = RequestCheck::requireJson(request, cb);
+  bool handleLoginPassword(const HttpRequestPtr &request, std::string &login, std::string &password, std::function<void(const HttpResponsePtr &)> &callback) {
+    const Json::Value *json = RequestCheck::requireJson(request, callback);
     if (!json)
-      return;
+      return false;
 
-    std::string login;
-    std::string password;
+    if (!RequestCheck::requireString(request, *json, "login", login, callback))
+      return false;
+    if (!RequestCheck::requireString(request, *json, "password", password, callback))
+      return false;
 
-    if (!RequestCheck::requireString(request, *json, "login", login, cb))
-      return;
-    if (!RequestCheck::requireString(request, *json, "password", password, cb))
-      return;
-
-    Json::Value res;
-    std::vector<unsigned char> random(32);
-    utils::secureRandomBytes(random.data(), random.size());
-
-    res["refresh_token"] = utils::base64Encode(random.data(), random.size());
-    res["access_token"] = utils::base64Encode(random.data(), random.size());
-
-    callback(ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res));
+    return true;
   }
 };
