@@ -1,3 +1,6 @@
+#include "RequestCheck.hpp"
+#include "ResponseHandler.hpp"
+#include "codes.hpp"
 #include "services/minecraftTokenServices.hpp"
 #include "services/uuidUtils.hpp"
 #include <drogon/HttpController.h>
@@ -19,173 +22,90 @@ public:
   METHOD_LIST_END
 
   void registerEndpoint(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
-    auto jsonPtr = request->jsonObject();
-    if (jsonPtr == nullptr) {
-      auto resp = HttpResponse::newHttpResponse();
-      // #TODO нормальный формат ответов
-      resp->setBody("Couldn't read json from response");
-      callback(resp);
-      return;
-    }
-
-    auto login = jsonPtr->get("login", Json::nullValue);
-    if (login == Json::nullValue || !login.isString()) {
-      auto resp = HttpResponse::newHttpResponse();
-      // #TODO нормальный формат ответов
-      resp->setBody("Login not defined or it is not string");
-      callback(resp);
-      return;
-    }
-
-    auto password = jsonPtr->get("password", Json::nullValue);
-    if (password == Json::nullValue || !password.isString()) {
-      auto resp = HttpResponse::newHttpResponse();
-      // #TODO нормальный формат ответов
-      resp->setBody("Password not defined or it is not string");
-      callback(resp);
-      return;
-    }
-
-    Json::String loginString = login.asString();
-    Json::String passwordString = password.asString();
-    Json::Value res;
-    std::vector<unsigned char> random(32);
-    utils::secureRandomBytes(random.data(), random.size());
-    res["refresh_token"] = utils::base64Encode(random.data(), random.size());
-    res["access_token"] = utils::base64Encode(random.data(), random.size());
-
-    auto resp = HttpResponse::newHttpJsonResponse(std::move(res));
-    callback(resp);
+    handleLoginPassword(request, std::move(callback));
   }
 
   void loginEndpoint(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
-    auto jsonPtr = request->jsonObject();
-    if (jsonPtr == nullptr) {
-      auto resp = HttpResponse::newHttpResponse();
-      // #TODO нормальный формат ответов
-      resp->setBody("Couldn't read json from response");
-      callback(resp);
-      return;
-    }
-
-    auto login = jsonPtr->get("login", Json::nullValue);
-    if (login == Json::nullValue || !login.isString()) {
-      auto resp = HttpResponse::newHttpResponse();
-      // #TODO нормальный формат ответов
-      resp->setBody("Login not defined or it is not string");
-      callback(resp);
-      return;
-    }
-
-    auto password = jsonPtr->get("password", Json::nullValue);
-    if (password == Json::nullValue || !password.isString()) {
-      auto resp = HttpResponse::newHttpResponse();
-      // #TODO нормальный формат ответов
-      resp->setBody("Password not defined or it is not string");
-      callback(resp);
-      return;
-    }
-
-    Json::String loginString = login.asString();
-    Json::String passwordString = password.asString();
-    Json::Value res;
-    std::vector<unsigned char> random(32);
-    utils::secureRandomBytes(random.data(), random.size());
-    res["refresh_token"] = utils::base64Encode(random.data(), random.size());
-    res["access_token"] = utils::base64Encode(random.data(), random.size());
-
-    auto resp = HttpResponse::newHttpJsonResponse(std::move(res));
-    callback(resp);
+    handleLoginPassword(request, std::move(callback));
   }
 
   void refreshEndpoint(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
-    auto jsonPtr = request->jsonObject();
-    if (jsonPtr == nullptr) {
-      auto resp = HttpResponse::newHttpResponse();
-      // #TODO нормальный формат ответов
-      resp->setBody("Couldn't read json from response");
-      callback(resp);
+    auto &cb = callback;
+    const Json::Value *json = RequestCheck::requireJson(request, cb);
+    if (!json)
       return;
-    }
 
-    auto refreshToken = jsonPtr->get("refresh_token", Json::nullValue);
-    if (refreshToken == Json::nullValue || !refreshToken.isString()) {
-      auto resp = HttpResponse::newHttpResponse();
-      // #TODO нормальный формат ответов
-      resp->setBody("Refresh token not defined or it is not string");
-      callback(resp);
-      return;
-    }
+    std::string refreshToken;
+    std::string method;
 
-    auto method = jsonPtr->get("method", Json::nullValue);
-    if (method == Json::nullValue || !method.isString()) {
-      auto resp = HttpResponse::newHttpResponse();
-      // #TODO нормальный формат ответов
-      resp->setBody("Method not defined or it is not string");
-      callback(resp);
+    if (!RequestCheck::requireString(request, *json, "refresh_token", refreshToken, cb))
       return;
-    }
-
-    Json::String refreshTokenString = refreshToken.asString();
-    Json::String methodString = method.asString();
-    if (method != "Web" && method != "Game") {
-      auto resp = HttpResponse::newHttpResponse();
-      // #TODO нормальный формат ответов
-      resp->setBody("Method incorrect");
-      callback(resp);
+    if (!RequestCheck::requireString(request, *json, "method", method, cb))
       return;
-    }
+    if (!RequestCheck::requireOneOf(request, "method", method, {"Web", "Game"}, cb))
+      return;
 
     UUID uuid = UUID::fromString("372d8631-754c-47d5-9465-4efa4fd3b0e5");
 
     Json::Value res;
-    std::vector<char> refreshTokenData = utils::base64DecodeToVector(refreshTokenString);
+    std::vector<char> refreshTokenData = utils::base64DecodeToVector(refreshToken);
 
     uint64_t token = createTokenForUser(uuid);
     uint8_t *bytes = reinterpret_cast<uint8_t *>(&token);
     res["token"] = utils::base64Encode(bytes, 8);
 
-    auto resp = HttpResponse::newHttpJsonResponse(std::move(res));
-    callback(resp);
+    callback(ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res));
   }
 
   void popGameTokenEndpoint(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
-    auto jsonPtr = request->jsonObject();
-    if (jsonPtr == nullptr) {
-      auto resp = HttpResponse::newHttpResponse();
-      // #TODO нормальный формат ответов
-      resp->setBody("Couldn't read json from response");
-      callback(resp);
+    auto &cb = callback;
+    const Json::Value *json = RequestCheck::requireJson(request, cb);
+    if (!json)
       return;
-    }
 
-    auto gameToken = jsonPtr->get("game_token", Json::nullValue);
-    if (gameToken == Json::nullValue || !gameToken.isString()) {
-      auto resp = HttpResponse::newHttpResponse();
-      // #TODO нормальный формат ответов
-      resp->setBody("Refresh token not defined or it is not string");
-      callback(resp);
+    std::string gameToken;
+    if (!RequestCheck::requireString(request, *json, "game_token", gameToken, cb))
       return;
-    }
 
-    std::vector<char> gameTokenVector = utils::base64DecodeToVector(gameToken.asString());
-    if (gameTokenVector.size() != 8) {
-      auto resp = HttpResponse::newHttpResponse();
-      // #TODO нормальный формат ответов
-      resp->setBody("Token invalid format, length ");
-      callback(resp);
+    auto data = utils::base64DecodeToVector(gameToken);
+    if (data.size() != sizeof(uint64_t)) {
+      callback(ResponseHandler::error(request, "Token invalid format", Codes::Error::INVALID_DATA));
       return;
     }
 
     uint64_t token = 0;
-    std::memcpy(&token, gameTokenVector.data(), sizeof(uint64_t));
+    std::memcpy(&token, data.data(), sizeof(uint64_t));
 
     UUID uuid = UUID::fromString("372d8631-754c-47d5-9465-4efa4fd3b0e5");
 
     Json::Value res;
     res["result"] = popToken(token, uuid);
 
-    auto resp = HttpResponse::newHttpJsonResponse(std::move(res));
-    callback(resp);
+    callback(ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res));
+  }
+
+private:
+  void handleLoginPassword(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
+    auto &cb = callback;
+    const Json::Value *json = RequestCheck::requireJson(request, cb);
+    if (!json)
+      return;
+
+    std::string login;
+    std::string password;
+
+    if (!RequestCheck::requireString(request, *json, "login", login, cb))
+      return;
+    if (!RequestCheck::requireString(request, *json, "password", password, cb))
+      return;
+
+    Json::Value res;
+    std::vector<unsigned char> random(32);
+    utils::secureRandomBytes(random.data(), random.size());
+
+    res["refresh_token"] = utils::base64Encode(random.data(), random.size());
+    res["access_token"] = utils::base64Encode(random.data(), random.size());
+
+    callback(ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res));
   }
 };
