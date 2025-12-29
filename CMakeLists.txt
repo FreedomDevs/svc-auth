@@ -22,9 +22,11 @@ set(CMAKE_CXX_FLAGS_NATIVE "-O3 -DNDEBUG -flto -march=native")
 
 set(BUILD_EXAMPLES OFF)
 set(BUILD_CTL OFF)
-set(BUILD_ORM OFF)
+set(BUILD_ORM ON)
+set(BUILD_POSTGRESQL ON)
 set(BUILD_BROTLI OFF)
 set(BUILD_YAML_CONFIG OFF)
+
 add_subdirectory(libs/drogon)
 
 # Добавляем include/ как include

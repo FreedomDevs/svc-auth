@@ -1,4 +1,3 @@
-#define USE_POSTGRESQL
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <trantor/utils/Logger.h>
