@@ -39,3 +39,5 @@ add_executable(svc-auth ${SOURCES})
 
 target_compile_options(svc-auth PRIVATE -Wall -Wextra -Wpedantic)
 target_link_libraries(svc-auth PRIVATE drogon)
+
+

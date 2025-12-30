@@ -21,6 +21,24 @@ void configurateSocket(int fd) {
 
 int main() {
   app().setBeforeListenSockOptCallback(configurateSocket).setAfterAcceptSockOptCallback([](int) {}).addListener("::", 9007);
+  auto client = drogon::orm::DbClient::newPgClient("dbname=svc-auth user=postgres password=postgres host=127.0.0.1 port=8007",
+                                                   1 // кол-во соединений в пуле
+  );
+  app().registerHandler("/test", [client](const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback) {
+    client->execSqlAsync(
+        "SELECT 1",
+        [callback](const orm::Result &r) {
+          auto resp = HttpResponse::newHttpResponse();
+          resp->setBody("DB OK, result = " + std::to_string(r[0][0].as<int>()));
+          callback(resp);
+        },
+        [callback](const orm::DrogonDbException &e) {
+          auto resp = HttpResponse::newHttpResponse();
+          resp->setStatusCode(k500InternalServerError);
+          resp->setBody("DB ERROR: " + std::string(e.base().what()));
+          callback(resp);
+        });
+  });
 
   LOG_INFO << "Server running on: *:9007";
   app().run();
