@@ -12,6 +12,7 @@ struct Codes {
   struct Success {
     using Code = Codes::Code;
     static inline constexpr Code AUTH_SUCCESS{200, "AUTH_SUCCESS", "Auth Success"};
+    static inline constexpr Code LIVE_OK{200, "LIVE_OK", "svc-auth жив"};
   };
 
   struct Error {

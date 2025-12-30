@@ -1,3 +1,4 @@
+#pragma once
 #include <drogon/orm/DbClient.h>
 
 void initDatabase();
