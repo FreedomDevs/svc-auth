@@ -25,23 +25,6 @@ int main() {
   app().setBeforeListenSockOptCallback(preconfigurateSocket).addListener("::", 9007);
   initDatabase();
 
-  app().registerHandler("/test", [](const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback) {
-    getDatabase()->execSqlAsync(
-        "SELECT 1",
-        [callback](const orm::Result &r) {
-          auto resp = HttpResponse::newHttpResponse();
-          resp->setBody("DB OK, result = " + std::to_string(r[0][0].as<int>()));
-          callback(resp);
-        },
-
-        [callback](const orm::DrogonDbException &e) {
-          auto resp = HttpResponse::newHttpResponse();
-          resp->setStatusCode(k500InternalServerError);
-          resp->setBody("DB ERROR: " + std::string(e.base().what()));
-          callback(resp);
-        });
-  });
-
   LOG_INFO << "Server running on: *:9007";
   app().run();
 
