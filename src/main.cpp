@@ -1,4 +1,3 @@
-#include "HealthCheckController.hpp"
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <trantor/utils/Logger.h>
@@ -25,7 +24,6 @@ void preconfigurateSocket(int fd) {
 int main() {
   app().setBeforeListenSockOptCallback(preconfigurateSocket).addListener("::", 9007);
   initDatabase();
-  initHealthCheckController();
 
   LOG_INFO << "Server running on: *:9007";
   app().run();
