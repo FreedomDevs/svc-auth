@@ -6,13 +6,25 @@
 using namespace drogon;
 
 int main() {
-  app().loadConfigFile("../config.json");
-  auto db = app().getDbClient();
+  auto client = drogon::orm::DbClient::newPgClient("dbname=svc-auth user=postgres password=postgres host=127.0.0.1 port=8007",
+                                                   1 // кол-во соединений в пуле
+  );
 
-  db->execSqlAsync(
-      "SELECT 1", [](const orm::Result &r) { LOG_INFO << "DB OK, result = " << r[0][0].as<int>(); },
-      [](const orm::DrogonDbException &e) { LOG_ERROR << "DB ERROR: " << e.base().what(); });
-
+  app().registerHandler("/test", [client](const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback) {
+    client->execSqlAsync(
+        "SELECT 1",
+        [callback](const orm::Result &r) {
+          auto resp = HttpResponse::newHttpResponse();
+          resp->setBody("DB OK, result = " + std::to_string(r[0][0].as<int>()));
+          callback(resp);
+        },
+        [callback](const orm::DrogonDbException &e) {
+          auto resp = HttpResponse::newHttpResponse();
+          resp->setStatusCode(k500InternalServerError);
+          resp->setBody("DB ERROR: " + std::string(e.base().what()));
+          callback(resp);
+        });
+  });
   app()
       .setBeforeListenSockOptCallback([](int fd) {
         LOG_INFO << "setBeforeListenSockOptCallback: " << fd;
