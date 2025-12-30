@@ -5,7 +5,9 @@
 #include <drogon/drogon.h>
 using namespace drogon;
 
-void configurateSocket(int fd) {
+#include "DBManager.hpp"
+
+void preconfigurateSocket(int fd) {
   // Включаем TCP_FASTOPEN
   int enable = 1;
   if (setsockopt(fd, IPPROTO_TCP, TCP_FASTOPEN, &enable, sizeof(enable)) == -1) {
@@ -20,18 +22,18 @@ void configurateSocket(int fd) {
 }
 
 int main() {
-  app().setBeforeListenSockOptCallback(configurateSocket).setAfterAcceptSockOptCallback([](int) {}).addListener("::", 9007);
-  auto client = drogon::orm::DbClient::newPgClient("dbname=svc-auth user=postgres password=postgres host=127.0.0.1 port=8007",
-                                                   1 // кол-во соединений в пуле
-  );
-  app().registerHandler("/test", [client](const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback) {
-    client->execSqlAsync(
+  app().setBeforeListenSockOptCallback(preconfigurateSocket).addListener("::", 9007);
+  initDatabase();
+
+  app().registerHandler("/test", [](const HttpRequestPtr &req, std::function<void(const HttpResponsePtr &)> &&callback) {
+    getDatabase()->execSqlAsync(
         "SELECT 1",
         [callback](const orm::Result &r) {
           auto resp = HttpResponse::newHttpResponse();
           resp->setBody("DB OK, result = " + std::to_string(r[0][0].as<int>()));
           callback(resp);
         },
+
         [callback](const orm::DrogonDbException &e) {
           auto resp = HttpResponse::newHttpResponse();
           resp->setStatusCode(k500InternalServerError);
@@ -42,4 +44,6 @@ int main() {
 
   LOG_INFO << "Server running on: *:9007";
   app().run();
+
+  closeDatabase(); // Это никогда не вызовется из-за run, надо когда-то исправить и сделать чтобы оно типо закрывалось
 }
