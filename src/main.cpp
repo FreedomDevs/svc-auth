@@ -6,6 +6,13 @@
 using namespace drogon;
 
 int main() {
+  app().loadConfigFile("../config.json");
+  auto db = app().getDbClient();
+
+  db->execSqlAsync(
+      "SELECT 1", [](const orm::Result &r) { LOG_INFO << "DB OK, result = " << r[0][0].as<int>(); },
+      [](const orm::DrogonDbException &e) { LOG_ERROR << "DB ERROR: " << e.base().what(); });
+
   app()
       .setBeforeListenSockOptCallback([](int fd) {
         LOG_INFO << "setBeforeListenSockOptCallback: " << fd;
