@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.2.0)
+cmake_minimum_required(VERSION 4.1.0)
 project(svc-auth VERSION 1.0 LANGUAGES CXX)
 
 # Экспортируем инструкцию по сборке проекта для всяких IDE
@@ -16,8 +16,8 @@ if(CCACHE_PROGRAM)
 endif()
 
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG -flto")
-set(CMAKE_CXX_FLAGS_NATIVE "-O3 -DNDEBUG -flto -march=native")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+set(CMAKE_CXX_FLAGS_NATIVE "-O3 -DNDEBUG -march=native")
 
 
 set(BUILD_EXAMPLES OFF)
@@ -26,6 +26,7 @@ set(BUILD_ORM ON)
 set(BUILD_POSTGRESQL ON)
 set(BUILD_BROTLI OFF)
 set(BUILD_YAML_CONFIG OFF)
+set(WITH_ZLIB OFF)
 
 add_subdirectory(libs/drogon)
 

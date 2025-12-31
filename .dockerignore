@@ -1,0 +1,11 @@
+.gitignore
+.git/
+build/
+Dockerfile
+docker-compose.yml
+compile_commands.yml
+run
+.clangd
+.clang-format
+.gitmodules
+cache/
