@@ -1,6 +1,7 @@
 #pragma once
 #include <chrono>
 #include <drogon/orm/Result.h>
+#include <drogon/utils/coroutine.h>
 #include <optional>
 #include <string>
 
@@ -37,19 +38,19 @@ struct Integration {
 
 class IntegrationRepo {
 public:
-  static Integration create(const std::string &userId);
-  static std::optional<Integration> getByUserId(const std::string &userId);
+  static drogon::Task<Integration> create(const std::string &userId);
+  static drogon::Task<std::optional<Integration>> getByUserId(const std::string &userId);
 
   /* 2FA */
-  static bool set2FA(const std::string &userId, TwoFAType type);
+  static drogon::Task<bool> set2FA(const std::string &userId, TwoFAType type);
 
   /* Telegram */
-  static bool setTelegramId(const std::string &userId, int64_t telegramId);
-  static bool resetTelegramId(const std::string &userId);
+  static drogon::Task<bool> setTelegramId(const std::string &userId, int64_t telegramId);
+  static drogon::Task<bool> resetTelegramId(const std::string &userId);
 
   /* Discord */
-  static bool setDiscordId(const std::string &userId, int64_t discordId);
-  static bool resetDiscordId(const std::string &userId);
+  static drogon::Task<bool> setDiscordId(const std::string &userId, int64_t discordId);
+  static drogon::Task<bool> resetDiscordId(const std::string &userId);
 
 private:
   static Integration mapRowToIntegration(const drogon::orm::Row &row);
@@ -64,12 +65,12 @@ struct RefreshToken {
 
 class RefreshTokenRepo {
 public:
-  static bool save(const std::string &userId, const std::string &tokenHash, int ttlSeconds);
-  static std::optional<RefreshToken> getByHash(const std::string &tokenHash);
-  static bool deleteByUserId(const std::string &userId);
-  static bool deleteByHash(const std::string &tokenHash);
-  static bool deleteExpiredByUserId(const std::string &userId);
-  static bool deleteAllExpired();
+  static drogon::Task<bool> save(const std::string &userId, const std::string &tokenHash, int ttlSeconds);
+  static drogon::Task<std::optional<RefreshToken>> getByHash(const std::string &tokenHash);
+  static drogon::Task<bool> deleteByUserId(const std::string &userId);
+  static drogon::Task<bool> deleteByHash(const std::string &tokenHash);
+  static drogon::Task<bool> deleteExpiredByUserId(const std::string &userId);
+  static drogon::Task<bool> deleteAllExpired();
 };
 
 } // namespace Repository
