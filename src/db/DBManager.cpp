@@ -1,4 +1,4 @@
-#include "DBManager.hpp"
+#include "db/DBManager.hpp"
 #include <string>
 
 const std::string DB_CONNECT_STRING = "dbname=svc-auth user=postgres password=postgres host=127.0.0.1 port=8007";
