@@ -1,6 +1,7 @@
 #include "RequestCheck.hpp"
 #include "ResponseHandler.hpp"
 #include "codes.hpp"
+#include "drogon/HttpResponse.h"
 #include "services/minecraftTokenServices.hpp"
 #include "services/uuidUtils.hpp"
 #include <drogon/HttpController.h>
@@ -20,102 +21,95 @@ public:
   ADD_METHOD_TO(AuthController::popGameTokenEndpoint, "/auth/pop_game_token", Post, "TraceIdMiddleware", "LoggerMiddleware");
   METHOD_LIST_END
 
-  void registerEndpoint(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
-    std::string login, password;
-    if (!handleLoginPassword(request, login, password, callback))
-      return;
+  Task<HttpResponsePtr> registerEndpoint(HttpRequestPtr request) {
+    try {
+      const Json::Value *json = RequestCheck::requireJson(request);
 
-    Json::Value res;
-    std::vector<unsigned char> random(32);
-    utils::secureRandomBytes(random.data(), random.size());
+      std::string login = RequestCheck::requireString(request, *json, "login");
+      std::string password = RequestCheck::requireString(request, *json, "password");
 
-    res["refresh_token"] = utils::base64Encode(random.data(), random.size());
-    res["access_token"] = utils::base64Encode(random.data(), random.size());
+      Json::Value res;
+      std::vector<unsigned char> random(32);
+      utils::secureRandomBytes(random.data(), random.size());
 
-    callback(ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res));
-  }
+      res["refresh_token"] = utils::base64Encode(random.data(), random.size());
+      res["access_token"] = utils::base64Encode(random.data(), random.size());
 
-  void loginEndpoint(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
-    std::string login, password;
-    if (!handleLoginPassword(request, login, password, callback))
-      return;
-
-    Json::Value res;
-    std::vector<unsigned char> random(32);
-    utils::secureRandomBytes(random.data(), random.size());
-
-    res["refresh_token"] = utils::base64Encode(random.data(), random.size());
-    res["access_token"] = utils::base64Encode(random.data(), random.size());
-
-    callback(ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res));
-  }
-
-  void refreshEndpoint(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
-    auto &cb = callback;
-    const Json::Value *json = RequestCheck::requireJson(request, cb);
-    if (!json)
-      return;
-
-    std::string refreshToken;
-    std::string method;
-
-    if (!RequestCheck::requireString(request, *json, "refresh_token", refreshToken, cb))
-      return;
-    if (!RequestCheck::requireString(request, *json, "method", method, cb))
-      return;
-    if (!RequestCheck::requireOneOf(request, "method", method, {"Web", "Game"}, cb))
-      return;
-
-    UUID uuid = UUID::fromString("372d8631-754c-47d5-9465-4efa4fd3b0e5");
-
-    Json::Value res;
-    std::vector<char> refreshTokenData = utils::base64DecodeToVector(refreshToken);
-
-    uint64_t token = createTokenForUser(uuid);
-    uint8_t *bytes = reinterpret_cast<uint8_t *>(&token);
-    res["token"] = utils::base64Encode(bytes, 8);
-
-    callback(ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res));
-  }
-
-  void popGameTokenEndpoint(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback) {
-    auto &cb = callback;
-    const Json::Value *json = RequestCheck::requireJson(request, cb);
-    if (!json)
-      return;
-
-    std::string gameToken;
-    if (!RequestCheck::requireString(request, *json, "game_token", gameToken, cb))
-      return;
-
-    auto data = utils::base64DecodeToVector(gameToken);
-    if (data.size() != sizeof(uint64_t)) {
-      callback(ResponseHandler::error(request, "Token invalid format", Codes::Error::INVALID_DATA));
-      return;
+      co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
+    } catch (const RequestCheck::ValidationError &error) {
+      co_return error.response;
     }
-
-    uint64_t token = 0;
-    std::memcpy(&token, data.data(), sizeof(uint64_t));
-
-    UUID uuid = UUID::fromString("372d8631-754c-47d5-9465-4efa4fd3b0e5");
-
-    Json::Value res;
-    res["result"] = popToken(token, uuid);
-
-    callback(ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res));
   }
 
-private:
-  bool handleLoginPassword(const HttpRequestPtr &request, std::string &login, std::string &password, std::function<void(const HttpResponsePtr &)> &callback) {
-    const Json::Value *json = RequestCheck::requireJson(request, callback);
-    if (!json)
-      return false;
+  Task<HttpResponsePtr> loginEndpoint(HttpRequestPtr request) {
+    try {
+      const Json::Value *json = RequestCheck::requireJson(request);
 
-    if (!RequestCheck::requireString(request, *json, "login", login, callback))
-      return false;
-    if (!RequestCheck::requireString(request, *json, "password", password, callback))
-      return false;
+      std::string login = RequestCheck::requireString(request, *json, "login");
+      std::string password = RequestCheck::requireString(request, *json, "password");
 
-    return true;
+      std::vector<unsigned char> random(32);
+      utils::secureRandomBytes(random.data(), random.size());
+
+      Json::Value res;
+      res["refresh_token"] = utils::base64Encode(random.data(), random.size());
+      res["access_token"] = utils::base64Encode(random.data(), random.size());
+
+      co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
+    } catch (const RequestCheck::ValidationError &error) {
+      co_return error.response;
+    }
+  }
+
+  Task<HttpResponsePtr> refreshEndpoint(HttpRequestPtr request) {
+    try {
+      const Json::Value *json = RequestCheck::requireJson(request);
+
+      std::string refreshToken = RequestCheck::requireString(request, *json, "refresh_token");
+      std::string method = RequestCheck::requireString(request, *json, "method");
+      RequestCheck::requireOneOf(request, "method", method, {"Web", "Game"});
+
+      UUID uuid = UUID::fromString("372d8631-754c-47d5-9465-4efa4fd3b0e5");
+
+      std::vector<char> refreshTokenData = utils::base64DecodeToVector(refreshToken);
+
+      uint64_t token = createTokenForUser(uuid);
+      uint8_t *bytes = reinterpret_cast<uint8_t *>(&token);
+
+      Json::Value res;
+      res["token"] = utils::base64Encode(bytes, 8);
+
+      co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
+    } catch (const RequestCheck::ValidationError &error) {
+      co_return error.response;
+    }
+  }
+
+  Task<HttpResponsePtr> popGameTokenEndpoint(HttpRequestPtr request) {
+    try {
+      const Json::Value *json = RequestCheck::requireJson(request);
+
+      std::string gameToken = RequestCheck::requireString(request, *json, "game_token");
+
+      auto data = utils::base64DecodeToVector(gameToken);
+      if (data.size() != sizeof(uint64_t))
+        co_return ResponseHandler::error(request, "Token invalid format", Codes::Error::INVALID_DATA);
+
+      uint64_t token = 0;
+      std::memcpy(&token, data.data(), sizeof(uint64_t));
+
+      UUID uuid = UUID::fromString("372d8631-754c-47d5-9465-4efa4fd3b0e5");
+
+      bool result = popToken(token, uuid);
+      Json::Value res;
+      res["result"] = result;
+
+      if (result)
+        co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
+      else
+        co_return ResponseHandler::error(request, Codes::Error::AUTH_FAILED);
+    } catch (const RequestCheck::ValidationError &error) {
+      co_return error.response;
+    }
   }
 };
