@@ -11,10 +11,20 @@ COPY . .
 RUN cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=/usr/bin/g++ -DCMAKE_C_COMPILER=/usr/bin/gcc && cmake --build build -j$(nproc)
 
 # --- Stage 2: Runtime ---
-FROM alpine:3.23
+FROM scratch
 
-# Только необходимые runtime-библиотеки
-RUN apk add --no-cache libstdc++ libpq libuuid jsoncpp sqlite-libs
+COPY --from=builder /lib/ld-musl-x86_64.so.1 /lib/
+
+COPY --from=builder \
+  /usr/lib/libssl.so.3 \
+  /usr/lib/libcrypto.so.3 \
+  /usr/lib/libjsoncpp.so.26 \
+  /usr/lib/libuuid.so.1 \
+  /usr/lib/libpq.so.5 \
+  /usr/lib/libz.so.1 \
+  /usr/lib/libstdc++.so.6 \
+  /usr/lib/libgcc_s.so.1 \
+  /usr/lib/
 
 COPY --from=builder /app/build/svc-auth /svc-auth
 

@@ -12,9 +12,6 @@ case "$MODE" in
     build)
         BUILD_TYPE="Release"
         ;;
-    native)
-        BUILD_TYPE="Native"
-        ;;
     cmake)
         BUILD_TYPE="Debug"
         ;;
