@@ -14,7 +14,7 @@ RUN cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER
 FROM alpine:3.23
 
 # Только необходимые runtime-библиотеки
-RUN apk add --no-cache libstdc++ libpq libuuid jsoncpp sqlite-libs
+RUN apk add --no-cache libstdc++ libpq libuuid jsoncpp
 
 COPY --from=builder /app/build/svc-auth /svc-auth
 
