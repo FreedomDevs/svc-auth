@@ -37,3 +37,9 @@ bool verifyPassword(const std::string &hash, const std::string &password) {
     throw std::runtime_error(std::string("Argon2 verify failed: ") + argon2_error_message(result));
   }
 }
+
+std::array<uint8_t, 32> getRefreshTokenHash(const std::vector<uint8_t> &data) {
+  std::array<uint8_t, 32> hash{};
+  SHA256(data.data(), data.size(), hash.data());
+  return hash;
+}
