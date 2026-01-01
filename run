@@ -7,6 +7,7 @@ shift || true   # чтобы можно было передавать допол
 BUILD_TYPE="Debug"
 MARCH_NATIVE=""
 GDB=0
+CMAKE_ONLY=0
 
 case "$MODE" in
     build)
@@ -14,6 +15,7 @@ case "$MODE" in
         ;;
     cmake)
         BUILD_TYPE="Debug"
+        CMAKE_ONLY=1
         ;;
     run)
         BUILD_TYPE="Debug"
@@ -27,6 +29,10 @@ case "$MODE" in
 esac
 
 cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+if [[ $CMAKE_ONLY -eq 1 ]]; then
+    exit
+fi
+
 cmake --build build -j$(nproc)
 
 if [[ $GDB -eq 1 ]]; then

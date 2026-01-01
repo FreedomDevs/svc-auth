@@ -2,7 +2,7 @@
 FROM alpine:3.23.2 AS builder
 
 # Ставим инструменты для сборки
-RUN apk add --no-cache g++ cmake pkgconfig postgresql-dev samurai util-linux-dev jsoncpp-dev zlib-dev
+RUN apk add --no-cache g++ cmake pkgconfig postgresql-dev samurai util-linux-dev jsoncpp-dev zlib-dev argon2-dev
 
 WORKDIR /app
 COPY . .
@@ -24,6 +24,7 @@ COPY --from=builder \
   /usr/lib/libz.so.1 \
   /usr/lib/libstdc++.so.6 \
   /usr/lib/libgcc_s.so.1 \
+  /usr/lib/libargon2.so.1 \
   /usr/lib/
 
 COPY --from=builder /app/build/svc-auth /svc-auth

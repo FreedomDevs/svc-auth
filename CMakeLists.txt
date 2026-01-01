@@ -33,6 +33,7 @@ set(WITH_ZLIB OFF)
 
 add_subdirectory(libs/drogon)
 
+
 # Добавляем include/ как include
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
@@ -41,7 +42,6 @@ file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 add_executable(svc-auth ${SOURCES})
 
+target_include_directories(svc-auth PRIVATE)
 target_compile_options(svc-auth PRIVATE -Wall -Wextra -Wpedantic)
-target_link_libraries(svc-auth PRIVATE drogon)
-
-
+target_link_libraries(svc-auth PRIVATE drogon argon2)
