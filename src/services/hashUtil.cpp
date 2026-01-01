@@ -1,23 +1,18 @@
 #include "services/hashUtil.hpp"
+#include "config.hpp"
 #include "drogon/utils/Utilities.h"
 #include <stdexcept>
-
-constexpr uint32_t ARGON2_T_COST = 2;       // количество итераций
-constexpr uint32_t ARGON2_M_COST = 1 << 16; // 64 MB памяти
-constexpr uint32_t ARGON2_PARALLELISM = 1;  // количество потоков
-constexpr uint32_t ARGON2_HASHLEN = 32;     // длина хеша
-constexpr size_t SALT_LEN = 16;
 
 std::string hashPassword(const std::string &password) {
   // Буфер для хеша (в закодированном виде)
   char hash[128];
 
-  std::array<unsigned char, SALT_LEN> salt;
+  std::vector<uint8_t> salt(config::ARGON2_SALT_LEN);
   drogon::utils::secureRandomBytes(salt.data(), salt.size());
 
   // Генерируем хеш Argon2id
-  int result = argon2id_hash_encoded(ARGON2_T_COST, ARGON2_M_COST, ARGON2_PARALLELISM, password.data(), password.size(), salt.data(), salt.size(),
-                                     ARGON2_HASHLEN, hash, sizeof(hash));
+  int result = argon2id_hash_encoded(config::ARGON2_T_COST, config::ARGON2_M_COST, config::ARGON2_PARALLELISM, password.data(), password.size(), salt.data(),
+                                     salt.size(), config::ARGON2_HASHLEN, hash, sizeof(hash));
 
   if (result != ARGON2_OK) {
     throw std::runtime_error(std::string("Argon2 hashing failed: ") + argon2_error_message(result));

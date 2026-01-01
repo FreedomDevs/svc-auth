@@ -1,4 +1,5 @@
 #include "services/jwtUtil.hpp"
+#include "config.hpp"
 #include <chrono>
 #include <drogon/utils/Utilities.h>
 
@@ -24,7 +25,7 @@ std::array<uint8_t, 32> base64ToHash(const std::string &b64) {
 std::string generateAccessToken(const AccessTokenData &data) {
   auto now = std::chrono::system_clock::now();
   auto iat = now;
-  auto exp = now + std::chrono::seconds(ttlSeconds);
+  auto exp = now + std::chrono::seconds(config::JWT_TTL_SECONDS);
 
   auto token = jwt::create()
                    .set_issuer("svc-auth")
@@ -33,7 +34,7 @@ std::string generateAccessToken(const AccessTokenData &data) {
                    .set_expires_at(exp)
                    .set_payload_claim("uuid", jwt::claim(data.uuid.toString()))
                    .set_payload_claim("tokenHash", jwt::claim(hashToBase64(data.tokenHash)))
-                   .sign(jwt::algorithm::hs256{secret});
+                   .sign(jwt::algorithm::hs256{config::JWT_SECRET});
 
   return token;
 }
@@ -43,7 +44,7 @@ std::optional<AccessTokenData> verifyAccessToken(const std::string &token) {
     auto decoded = jwt::decode(token);
 
     // Проверка подписи
-    jwt::verify().allow_algorithm(jwt::algorithm::hs256{secret}).with_issuer("svc-auth").verify(decoded);
+    jwt::verify().allow_algorithm(jwt::algorithm::hs256{config::JWT_SECRET}).with_issuer("svc-auth").verify(decoded);
 
     // Проверка истечения
     auto now = std::chrono::system_clock::now();

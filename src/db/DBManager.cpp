@@ -1,8 +1,7 @@
 #include "db/DBManager.hpp"
+#include "config.hpp"
 #include <string>
 
-const std::string DB_CONNECT_STRING = "dbname=svc-auth user=postgres password=postgres host=127.0.0.1 port=8007";
-const size_t DB_CONNECTIONS_POOL_SIZE = 4;
 drogon::orm::DbClientPtr client = nullptr;
 
 const std::string INTEGRATIONS_TABLE = R"(
@@ -25,7 +24,7 @@ const std::string TOKEN_HASH_INDEX = "CREATE UNIQUE INDEX IF NOT EXISTS idx_refr
 const std::string TOKEN_EXPIRES_AT_INDEX = "CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);";
 
 void initDatabase() {
-  client = drogon::orm::DbClient::newPgClient(DB_CONNECT_STRING, DB_CONNECTIONS_POOL_SIZE);
+  client = drogon::orm::DbClient::newPgClient(config::DB_CONNECT_STRING, config::DB_CONNECTIONS_POOL_SIZE);
   client->execSqlSync(INTEGRATIONS_TABLE);
   client->execSqlSync(REFRESH_TOKENS_TABLE);
   client->execSqlSync(TOKEN_HASH_INDEX);

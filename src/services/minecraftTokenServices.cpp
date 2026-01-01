@@ -1,4 +1,5 @@
 #include "services/minecraftTokenServices.hpp"
+#include "config.hpp"
 #include "services/uuidUtils.hpp"
 #include <drogon/utils/Utilities.h>
 #include <mutex>
@@ -12,8 +13,6 @@ std::unordered_map<UUID, uint64_t> uuidIndex;
 std::mutex globalMutex;
 
 std::chrono::steady_clock::time_point lastGcTime{}; // нулевая дата
-
-const auto MAX_TOKENS_BEFORE_GC = 500;
 
 uint64_t generateToken() {
   uint64_t token = 0; // Создаём переменную с токеном
@@ -45,7 +44,7 @@ uint64_t createTokenForUser(const UUID &userUUID) {
   Token token = Token(generateToken(), userUUID, now + std::chrono::seconds(10));
   uint64_t key = token.value;
 
-  if (tokenIndex.size() > MAX_TOKENS_BEFORE_GC && now - lastGcTime > std::chrono::seconds(5))
+  if (tokenIndex.size() > config::MAX_GAME_TOKENS_BEFORE_GC && now - lastGcTime > std::chrono::seconds(5))
     runTokenGC();
 
   tokenIndex.emplace(key, token);

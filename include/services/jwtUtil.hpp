@@ -9,9 +9,6 @@ struct AccessTokenData {
   std::array<uint8_t, 32> tokenHash;
 };
 
-const std::string secret = "H6VUCBdEyX1bq9pwi1fgzMGCNuuFtGD8";
-constexpr uint64_t ttlSeconds = 900;
-
 /**
  * @brief Генерация access токена для пользователя
  * @param userId UUID пользователя
