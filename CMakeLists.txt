@@ -34,6 +34,9 @@ set(WITH_ZLIB OFF)
 add_subdirectory(libs/drogon)
 
 
+set(JWT_BUILD_EXAMPLES OFF)
+add_subdirectory(libs/jwt-cpp)
+
 # Добавляем include/ как include
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
@@ -44,4 +47,4 @@ add_executable(svc-auth ${SOURCES})
 
 target_include_directories(svc-auth PRIVATE)
 target_compile_options(svc-auth PRIVATE -Wall -Wextra -Wpedantic)
-target_link_libraries(svc-auth PRIVATE drogon argon2)
+target_link_libraries(svc-auth PRIVATE drogon argon2 jwt-cpp)
