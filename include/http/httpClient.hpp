@@ -11,18 +11,14 @@ public:
   HttpClient(std::string baseUrl, int retries = 3, std::chrono::milliseconds timeout = std::chrono::seconds(2))
       : client_(drogon::HttpClient::newHttpClient(baseUrl)), retries_(retries), timeout_(timeout) {}
 
-  // GET
   template <typename Resp> HttpResult<Resp> get(const std::string &path) { return request<std::monostate, Resp>(drogon::Get, path, nullptr); }
 
-  // POST
   template <typename Req, typename Resp> HttpResult<Resp> post(const std::string &path, const Req &body) {
     return request<Req, Resp>(drogon::Post, path, &body);
   }
 
-  // PUT
   template <typename Req, typename Resp> HttpResult<Resp> put(const std::string &path, const Req &body) { return request<Req, Resp>(drogon::Put, path, &body); }
 
-  // DELETE
   HttpResult<std::monostate> del(const std::string &path) { return request<std::monostate, std::monostate>(drogon::Delete, path, nullptr); }
 
 private:
