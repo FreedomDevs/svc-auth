@@ -3,6 +3,8 @@
 #include <sstream>
 #include <trantor/utils/Logger.h>
 
+namespace config {
+
 std::string getEnvOrDefault(const std::string &key, const std::string &defaultValue) {
   const char *value = std::getenv(key.c_str());
   if (value == nullptr || std::string(value).empty()) {
@@ -39,3 +41,5 @@ int getEnvIntOrDefault(const std::string &key, int defaultValue) {
 
   return v;
 }
+
+} // namespace config
