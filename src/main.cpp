@@ -5,6 +5,7 @@
 #include <drogon/drogon.h>
 using namespace drogon;
 
+#include "config.hpp"
 #include "db/DBManager.hpp"
 
 void preconfigurateSocket(int fd) {
@@ -22,6 +23,8 @@ void preconfigurateSocket(int fd) {
 }
 
 int main() {
+  config::loadConfig();
+
   app().setBeforeListenSockOptCallback(preconfigurateSocket).addListener("::", 9007);
   initDatabase();
 
