@@ -36,6 +36,7 @@ fi
 cmake --build build -j$(nproc)
 
 if [[ $GDB -eq 1 ]]; then
+    cp -r secrets/ build/
     cd build
     gdb --batch -ex run -ex bt -ex quit --args ./svc-auth
 fi

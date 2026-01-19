@@ -1,3 +1,5 @@
+#include "services/jwtUtil.hpp"
+#include "services/uuidUtils.hpp"
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <trantor/utils/Logger.h>
@@ -5,7 +7,6 @@
 #include <drogon/drogon.h>
 using namespace drogon;
 
-#include "config.hpp"
 #include "db/DBManager.hpp"
 
 void preconfigurateSocket(int fd) {
@@ -24,6 +25,12 @@ void preconfigurateSocket(int fd) {
 
 int main() {
   config::loadConfig();
+
+  AccessTokenData token{UUID::fromString("71b911d4-14bc-4f5b-b66a-477974c4de0d"),
+                        {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}};
+
+  auto tokean = generateAccessToken(token);
+  LOG_INFO << verifyAccessToken(tokean).has_value();
 
   app().setBeforeListenSockOptCallback(preconfigurateSocket).addListener("::", 9007);
   initDatabase();

@@ -1,7 +1,4 @@
 #include "config.hpp"
-#include <algorithm>
-#include <sstream>
-#include <trantor/utils/Logger.h>
 
 namespace config {
 
@@ -40,6 +37,20 @@ int getEnvIntOrDefault(const std::string &key, int defaultValue) {
   }
 
   return v;
+}
+
+std::string readFile(const std::string &filepath) {
+  std::ifstream file(filepath, std::ios::in);
+  if (!file.is_open()) {
+    throw std::runtime_error("Cannot open file: " + filepath);
+  }
+  std::stringstream buffer;
+  buffer << file.rdbuf();
+  std::string content = buffer.str();
+  if (content.empty()) {
+    throw std::runtime_error("File is empty: " + filepath);
+  }
+  return content;
 }
 
 } // namespace config
