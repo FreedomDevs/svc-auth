@@ -32,14 +32,14 @@ private:
 
       if constexpr (!std::is_same_v<Req, std::monostate>) {
         req->addHeader("Content-Type", "application/json");
-        try {
-          Json::Value json = body->toJson();
-          req->setBody(json.toStyledString());
-        } catch (const std::exception &e) {
-          return HttpError{HttpErrorType::Serialization, 0, e.what()};
-        }
-      }
 
+        if (!body) {
+          return HttpError{HttpErrorType::Serialization, 0, "Body pointer is null"};
+        }
+
+        // Сериализуем Json::Value безопасно
+        req->setBody(Json::writeString(Json::StreamWriterBuilder(), *body));
+      }
       auto [result, resp] = client_->sendRequest(req, timeoutSec);
 
       if (result != drogon::ReqResult::Ok) {

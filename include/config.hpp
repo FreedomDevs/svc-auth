@@ -27,11 +27,11 @@ inline int DB_CONNECTIONS_POOL_SIZE;
 inline std::string DB_CONNECT_STRING;
 
 inline void loadConfig() {
-  ARGON2_T_COST = getEnvIntOrDefault("ARGON2_T_COST", 2);       // Количество итераций
-  ARGON2_M_COST = getEnvIntOrDefault("ARGON2_M_COST", 1 << 16); // 64 МБ памяти
-  ARGON2_M_COST = getEnvIntOrDefault("ARGON2_PARALLELISM", 1);  // Число потоков
-  ARGON2_M_COST = getEnvIntOrDefault("ARGON2_HASHLEN", 32);     // Длинна итогового хеша
-  ARGON2_M_COST = getEnvIntOrDefault("ARGON2_SALT_LEN", 16);    // Длинна соли
+  ARGON2_T_COST = getEnvIntOrDefault("ARGON2_T_COST", 2);           // Количество итераций
+  ARGON2_M_COST = getEnvIntOrDefault("ARGON2_M_COST", 1 << 16);     // 64 МБ памяти
+  ARGON2_PARALLELISM = getEnvIntOrDefault("ARGON2_PARALLELISM", 1); // Число потоков
+  ARGON2_HASHLEN = getEnvIntOrDefault("ARGON2_HASHLEN", 32);        // Длинна итогового хеша
+  ARGON2_SALT_LEN = getEnvIntOrDefault("ARGON2_SALT_LEN", 16);      // Длинна соли
 
   JWT_PRIV_KEY = readFile("secrets/ed25519_private.pem");
   JWT_PUB_KEY = readFile("secrets/ed25519_public.pem");

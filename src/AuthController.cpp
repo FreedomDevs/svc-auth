@@ -2,6 +2,9 @@
 #include "ResponseHandler.hpp"
 #include "codes.hpp"
 #include "drogon/HttpResponse.h"
+#include "http/usersClient.hpp"
+#include "services/hashUtil.hpp"
+#include "services/jwtUtil.hpp"
 #include "services/minecraftTokenServices.hpp"
 #include "services/uuidUtils.hpp"
 #include <drogon/HttpController.h>
@@ -28,16 +31,57 @@ public:
       std::string login = RequestCheck::requireString(request, *json, "login");
       std::string password = RequestCheck::requireString(request, *json, "password");
 
+      UsersClient usersClient;
+
+      // Проверяем существования беззубого существа (базисный игрок элизиума)
+      auto userCheckResult = usersClient.getUserById(login); // TODO: сделать нормальнй метод
+      if (!std::holds_alternative<HttpError>(userCheckResult)) {
+        co_return ResponseHandler::error(request, "Login already exists", Codes::Error::USER_ALREADY_EXISTS);
+      } else {
+        auto err = std::get<HttpError>(userCheckResult);
+        if (err.httpStatus != 404) {
+          co_return ResponseHandler::error(request, "Error checking user existence: " + err.message, Codes::Error::USER_CREATION_FAILED);
+        }
+      }
+
+      // Хешируем пас ага фас блять я ебал
+      std::string hashedPassword;
+      try {
+        hashedPassword = hashPassword(password);
+      } catch (const std::exception &e) {
+        co_return ResponseHandler::error(request, "Password hashing failed: " + std::string(e.what()), Codes::Error::HASHING_FAILED);
+      }
+      // Создаём ебланчика
+      auto createResult = usersClient.createUser(login, hashedPassword);
+      if (std::holds_alternative<HttpError>(createResult)) {
+        auto err = std::get<HttpError>(createResult);
+        co_return ResponseHandler::error(request, "User creation failed: " + err.message, Codes::Error::USER_CREATION_FAILED);
+      }
+
+      UserResponseDto createdUser = std::get<UserResponseDto>(createResult);
+
+      // генерим ебланчику токены
+      std::vector<uint8_t> refreshData(32);
+      utils::secureRandomBytes(refreshData.data(), refreshData.size());
+      auto refreshTokenHash = getRefreshTokenHash(refreshData);
+
+      AccessTokenData tokenData;
+      tokenData.uuid = UUID::fromString(createdUser.data.id);
+      tokenData.tokenHash = refreshTokenHash;
+
+      std::string accessToken = generateAccessToken(tokenData);
+      std::string refreshToken = utils::base64Encode(refreshData.data(), refreshData.size());
+
+      // Отдаём ебланчику ответ и шлём его неахуй
       Json::Value res;
-      std::vector<unsigned char> random(32);
-      utils::secureRandomBytes(random.data(), random.size());
+      res["access_token"] = accessToken;
+      res["refresh_token"] = refreshToken;
 
-      res["refresh_token"] = utils::base64Encode(random.data(), random.size());
-      res["access_token"] = utils::base64Encode(random.data(), random.size());
-
-      co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
+      co_return ResponseHandler::success(request, Codes::Success::REGISTRATION_SUCCESS, res);
     } catch (const RequestCheck::ValidationError &error) {
       co_return error.response;
+    } catch (const std::exception &ex) {
+      co_return ResponseHandler::error(request, "Unexpected error: " + std::string(ex.what()), Codes::Error::USER_CREATION_FAILED);
     }
   }
 
