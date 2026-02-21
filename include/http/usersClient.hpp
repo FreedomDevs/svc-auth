@@ -17,7 +17,7 @@ public:
     std::string jsonStr = Json::writeString(writer, body);
     std::cout << "[UsersClient::createUser] Payload: " << jsonStr << std::endl;
 
-    return http_.post<Json::Value, UserResponseDto>("/users", &body);
+    return http_.post<Json::Value, UserResponseDto>("/users", body);
   }
 
 private:

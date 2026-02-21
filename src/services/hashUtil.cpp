@@ -6,7 +6,7 @@
 
 std::string hashPassword(const std::string &password) {
   // Буфер для хеша (в закодированном виде)
-  char hash[4096];
+  char hash[1024];
 
   std::vector<uint8_t> salt(config::ARGON2_SALT_LEN);
   drogon::utils::secureRandomBytes(salt.data(), salt.size());

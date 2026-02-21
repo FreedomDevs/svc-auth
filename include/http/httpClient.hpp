@@ -3,6 +3,7 @@
 #include "httpResult.hpp"
 #include <chrono>
 #include <drogon/drogon.h>
+#include <json/writer.h>
 #include <string>
 #include <type_traits>
 
@@ -31,14 +32,17 @@ private:
       req->setPath(path);
 
       if constexpr (!std::is_same_v<Req, std::monostate>) {
-        req->addHeader("Content-Type", "application/json");
+        req->setContentTypeCode(drogon::CT_APPLICATION_JSON);
 
         if (!body) {
           return HttpError{HttpErrorType::Serialization, 0, "Body pointer is null"};
         }
 
+        Json::StreamWriterBuilder builder;
+        builder["indentation"] = ""; // Гарантируем отсутствие отступов
+
         // Сериализуем Json::Value безопасно
-        req->setBody(Json::writeString(Json::StreamWriterBuilder(), *body));
+        req->setBody(Json::writeString(builder, *body));
       }
       auto [result, resp] = client_->sendRequest(req, timeoutSec);
 
