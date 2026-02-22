@@ -2,6 +2,7 @@
 #include "ResponseHandler.hpp"
 #include "codes.hpp"
 #include "drogon/HttpResponse.h"
+#include "drogon/HttpTypes.h"
 #include "dto/userDto.hpp"
 #include "dto/userResponseDto.hpp"
 #include "http/usersClient.hpp"
@@ -21,6 +22,7 @@ class AuthController : public HttpController<AuthController> {
 public:
   METHOD_LIST_BEGIN
   ADD_METHOD_TO(AuthController::registerEndpoint, "/auth/register", Post, "TraceIdMiddleware", "LoggerMiddleware");
+  ADD_METHOD_TO(AuthController::altRegisterEndpoint, "/auth/alt/register", Post, "TraceIdMiddleware", "LoggerMiddleware");
   ADD_METHOD_TO(AuthController::loginEndpoint, "/auth/login", Post, "TraceIdMiddleware", "LoggerMiddleware");
   ADD_METHOD_TO(AuthController::altLoginEndpoint, "/auth/alt/login", Post, "TraceIdMiddleware", "LoggerMiddleware");
   ADD_METHOD_TO(AuthController::refreshEndpoint, "/auth/refresh", Post, "TraceIdMiddleware", "LoggerMiddleware");
@@ -81,6 +83,48 @@ public:
       res["refresh_token"] = refreshToken;
 
       co_return ResponseHandler::success(request, Codes::Success::REGISTRATION_SUCCESS, res);
+    } catch (const RequestCheck::ValidationError &error) {
+      co_return error.response;
+    } catch (const std::exception &ex) {
+      co_return ResponseHandler::error(request, "Unexpected error: " + std::string(ex.what()), Codes::Error::USER_CREATION_FAILED);
+    }
+  }
+
+  Task<HttpResponsePtr> altRegisterEndpoint(HttpRequestPtr request) {
+    try {
+      const Json::Value *json = RequestCheck::requireJson(request);
+
+      std::string login = RequestCheck::requireString(request, *json, "login");
+      std::string password = RequestCheck::requireString(request, *json, "password");
+
+      UsersClient usersClient;
+
+      // Проверяем существования беззубого существа (базисный игрок элизиума)
+      auto userCheckResult = co_await usersClient.getUserById(login); // TODO: сделать нормальнй метод
+      if (!std::holds_alternative<HttpError>(userCheckResult)) {
+        co_return ResponseHandler::error(request, "Login already exists", Codes::Error::USER_ALREADY_EXISTS);
+      } else {
+        auto err = std::get<HttpError>(userCheckResult);
+        if (err.httpStatus != 404) {
+          co_return ResponseHandler::error(request, "Error checking user existence: " + err.message, Codes::Error::USER_CREATION_FAILED);
+        }
+      }
+
+      // Хешируем пароль
+      std::string hashedPassword;
+      try {
+        hashedPassword = hashPassword(password);
+      } catch (const std::exception &e) {
+        co_return ResponseHandler::error(request, "Password hashing failed: " + std::string(e.what()), Codes::Error::HASHING_FAILED);
+      }
+      // Создаём ебланчика
+      auto createResult = co_await usersClient.createUser(login, hashedPassword);
+      if (std::holds_alternative<HttpError>(createResult)) {
+        auto err = std::get<HttpError>(createResult);
+        co_return ResponseHandler::error(request, "User creation failed: " + err.message, Codes::Error::USER_CREATION_FAILED);
+      }
+
+      co_return ResponseHandler::success(request, Codes::Success::REGISTRATION_SUCCESS, Json::nullValue);
     } catch (const RequestCheck::ValidationError &error) {
       co_return error.response;
     } catch (const std::exception &ex) {

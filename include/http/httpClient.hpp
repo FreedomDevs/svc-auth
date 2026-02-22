@@ -17,9 +17,10 @@ public:
     return request<std::monostate, Resp>(drogon::Get, path, nullptr);
   }
 
-  template <typename Req, typename Resp> drogon::Task<HttpResult<Resp>> post(const std::string &path, const Req &body) {
-    return request<Req, Resp>(drogon::Post, path, &body);
-  }
+  template <typename Req, typename Resp> drogon::Task<HttpResult<Resp>> post(const std::string &path,
+                            const Req &body) {
+    return request<Req, Resp>(drogon::Post, path, body);
+}
 
   template <typename Req, typename Resp> drogon::Task<HttpResult<Resp>> put(const std::string &path, const Req &body) {
     return request<Req, Resp>(drogon::Put, path, &body);
