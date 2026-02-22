@@ -6,7 +6,9 @@
 #include "dto/userDto.hpp"
 #include "dto/userResponseDto.hpp"
 #include "http/usersClient.hpp"
+#include "services/RateLimiter.hpp"
 #include "services/hashUtil.hpp"
+#include "services/httpUtils.hpp"
 #include "services/jwtUtil.hpp"
 #include "services/minecraftTokenServices.hpp"
 #include "services/uuidUtils.hpp"
@@ -156,6 +158,12 @@ public:
       }
 
       if (!verifyPassword(*user.data.passwordHash, password)) {
+        std::string clientIp = getClientIp(request);
+
+        if (!limiter.allow("ip:" + clientIp, 10, std::chrono::seconds(60))) {
+          co_return ResponseHandler::error(request, "Too many failed attempts from this IP", Codes::Error::TOO_MANY_ATTEMPTS);
+        }
+
         co_return ResponseHandler::error(request, "Password invalid", Codes::Error::PASSWORD_INVALID);
       }
 
@@ -207,6 +215,12 @@ public:
       }
 
       if (!verifyPassword(*user.data.passwordHash, password)) {
+        std::string clientIp = getClientIp(request);
+
+        if (!limiter.allow("ip:" + clientIp, 10, std::chrono::seconds(60))) {
+          co_return ResponseHandler::error(request, "Too many failed attempts from this IP", Codes::Error::TOO_MANY_ATTEMPTS);
+        }
+
         co_return ResponseHandler::error(request, "Password invalid", Codes::Error::PASSWORD_INVALID);
       }
 
@@ -267,4 +281,8 @@ public:
       co_return error.response;
     }
   }
+
+private:
+  static services::RateLimiter limiter;
 };
+services::RateLimiter AuthController::limiter;

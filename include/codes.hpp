@@ -30,5 +30,7 @@ struct Codes {
     static inline constexpr Code USER_ALREADY_EXISTS{409, "USER_ALREADY_EXISTS", "User with this login already exists"};
     static inline constexpr Code HASHING_FAILED{500, "HASHING_FAILED", "Password hashing failed"};
     static inline constexpr Code USER_CREATION_FAILED{500, "USER_CREATION_FAILED", "Failed to create user in svc-users"};
+
+    static inline constexpr Code TOO_MANY_ATTEMPTS{429, "TOO_MANY_ATTEMPTS", "Too many failed attempts"};
   };
 };
