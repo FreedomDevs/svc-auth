@@ -2,6 +2,8 @@
 #include "ResponseHandler.hpp"
 #include "codes.hpp"
 #include "drogon/HttpResponse.h"
+#include "dto/userDto.hpp"
+#include "dto/userResponseDto.hpp"
 #include "http/usersClient.hpp"
 #include "services/hashUtil.hpp"
 #include "services/jwtUtil.hpp"
@@ -20,6 +22,7 @@ public:
   METHOD_LIST_BEGIN
   ADD_METHOD_TO(AuthController::registerEndpoint, "/auth/register", Post, "TraceIdMiddleware", "LoggerMiddleware");
   ADD_METHOD_TO(AuthController::loginEndpoint, "/auth/login", Post, "TraceIdMiddleware", "LoggerMiddleware");
+  ADD_METHOD_TO(AuthController::altLoginEndpoint, "/auth/alt/login", Post, "TraceIdMiddleware", "LoggerMiddleware");
   ADD_METHOD_TO(AuthController::refreshEndpoint, "/auth/refresh", Post, "TraceIdMiddleware", "LoggerMiddleware");
   ADD_METHOD_TO(AuthController::popGameTokenEndpoint, "/auth/pop_game_token", Post, "TraceIdMiddleware", "LoggerMiddleware");
   METHOD_LIST_END
@@ -34,7 +37,7 @@ public:
       UsersClient usersClient;
 
       // Проверяем существования беззубого существа (базисный игрок элизиума)
-      auto userCheckResult = usersClient.getUserById(login); // TODO: сделать нормальнй метод
+      auto userCheckResult = co_await usersClient.getUserById(login); // TODO: сделать нормальнй метод
       if (!std::holds_alternative<HttpError>(userCheckResult)) {
         co_return ResponseHandler::error(request, "Login already exists", Codes::Error::USER_ALREADY_EXISTS);
       } else {
@@ -44,7 +47,7 @@ public:
         }
       }
 
-      // Хешируем пас ага фас блять я ебал
+      // Хешируем пароль
       std::string hashedPassword;
       try {
         hashedPassword = hashPassword(password);
@@ -52,7 +55,7 @@ public:
         co_return ResponseHandler::error(request, "Password hashing failed: " + std::string(e.what()), Codes::Error::HASHING_FAILED);
       }
       // Создаём ебланчика
-      auto createResult = usersClient.createUser(login, hashedPassword);
+      auto createResult = co_await usersClient.createUser(login, hashedPassword);
       if (std::holds_alternative<HttpError>(createResult)) {
         auto err = std::get<HttpError>(createResult);
         co_return ResponseHandler::error(request, "User creation failed: " + err.message, Codes::Error::USER_CREATION_FAILED);
@@ -92,12 +95,42 @@ public:
       std::string login = RequestCheck::requireString(request, *json, "login");
       std::string password = RequestCheck::requireString(request, *json, "password");
 
-      std::vector<unsigned char> random(32);
-      utils::secureRandomBytes(random.data(), random.size());
+      UsersClient usersClient;
+
+      // Получаем информацию о игроке, включая его пароль
+      auto userCheckResult = co_await usersClient.getUserById(login, true);
+      if (std::holds_alternative<HttpError>(userCheckResult)) {
+        auto err = std::get<HttpError>(userCheckResult);
+        if (err.httpStatus != 404) {
+          co_return ResponseHandler::error(request, "Error checking user existence: " + err.message, Codes::Error::AUTH_FAILED);
+        }
+      }
+      UserResponseDto user = std::get<UserResponseDto>(userCheckResult);
+
+      if (!user.data.passwordHash) {
+        throw std::logic_error("Password hash is null");
+      }
+
+      if (!verifyPassword(*user.data.passwordHash, password)) {
+        co_return ResponseHandler::error(request, "Password invalid", Codes::Error::PASSWORD_INVALID);
+      }
+
+      // генерим refresh токен
+      std::vector<uint8_t> refreshData(32);
+      utils::secureRandomBytes(refreshData.data(), refreshData.size());
+      auto refreshTokenHash = getRefreshTokenHash(refreshData);
+
+      // Делаем access_token
+      AccessTokenData tokenData;
+      tokenData.uuid = UUID::fromString(user.data.id);
+      tokenData.tokenHash = refreshTokenHash;
+
+      std::string accessToken = generateAccessToken(tokenData);
+      std::string refreshToken = utils::base64Encode(refreshData.data(), refreshData.size());
 
       Json::Value res;
-      res["refresh_token"] = utils::base64Encode(random.data(), random.size());
-      res["access_token"] = utils::base64Encode(random.data(), random.size());
+      res["access_token"] = accessToken;
+      res["refresh_token"] = refreshToken;
 
       co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
     } catch (const RequestCheck::ValidationError &error) {
@@ -105,7 +138,41 @@ public:
     }
   }
 
-  Task<HttpResponsePtr> refreshEndpoint(HttpRequestPtr request) {
+  Task<HttpResponsePtr> altLoginEndpoint(HttpRequestPtr request) {
+    try {
+      const Json::Value *json = RequestCheck::requireJson(request);
+
+      std::string login = RequestCheck::requireString(request, *json, "login");
+      std::string password = RequestCheck::requireString(request, *json, "password");
+
+      UsersClient usersClient;
+
+      // Получаем информацию о игроке, включая его пароль
+      auto userCheckResult = co_await usersClient.getUserById(login, true);
+      if (std::holds_alternative<HttpError>(userCheckResult)) {
+        auto err = std::get<HttpError>(userCheckResult);
+        if (err.httpStatus != 404) {
+          co_return ResponseHandler::error(request, "Error checking user existence: " + err.message, Codes::Error::AUTH_FAILED);
+        }
+      }
+
+      UserResponseDto user = std::get<UserResponseDto>(userCheckResult);
+
+      if (!user.data.passwordHash) {
+        throw std::logic_error("Password hash is null");
+      }
+
+      if (!verifyPassword(*user.data.passwordHash, password)) {
+        co_return ResponseHandler::error(request, "Password invalid", Codes::Error::PASSWORD_INVALID);
+      }
+
+      co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, Json::nullValue);
+    } catch (const RequestCheck::ValidationError &error) {
+      co_return error.response;
+    }
+  }
+
+  Task<HttpResponsePtr> refreshEndpoint(HttpRequestPtr request) { // TODO СДЕЛАТЬ
     try {
       const Json::Value *json = RequestCheck::requireJson(request);
 
@@ -129,7 +196,7 @@ public:
     }
   }
 
-  Task<HttpResponsePtr> popGameTokenEndpoint(HttpRequestPtr request) {
+  Task<HttpResponsePtr> popGameTokenEndpoint(HttpRequestPtr request) { // TODO СДЕЛАТЬ
     try {
       const Json::Value *json = RequestCheck::requireJson(request);
 

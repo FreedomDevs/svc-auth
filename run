@@ -5,7 +5,6 @@ MODE="$1"
 shift || true   # чтобы можно было передавать дополнительные аргументы, если нужно
 
 BUILD_TYPE="Debug"
-MARCH_NATIVE=""
 GDB=0
 CMAKE_ONLY=0
 
@@ -28,12 +27,12 @@ case "$MODE" in
         ;;
 esac
 
-cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+CC=clang CXX=clang++ cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=$BUILD_TYPE
 if [[ $CMAKE_ONLY -eq 1 ]]; then
     exit
 fi
 
-cmake --build build -j$(nproc)
+CC=clang CXX=clang++ cmake --build build -j$(nproc)
 
 if [[ $GDB -eq 1 ]]; then
     cp -r secrets/ build/

@@ -2,13 +2,13 @@
 FROM alpine:3.23.2 AS builder
 
 # Ставим инструменты для сборки
-RUN apk add --no-cache g++ cmake pkgconfig postgresql-dev samurai util-linux-dev jsoncpp-dev zlib-dev argon2-dev
+RUN apk add --no-cache clang cmake pkgconfig postgresql-dev samurai util-linux-dev jsoncpp-dev zlib-dev argon2-dev
 
 WORKDIR /app
 COPY . .
 
 # Сборка
-RUN cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=/usr/bin/g++ -DCMAKE_C_COMPILER=/usr/bin/gcc && cmake --build build -j$(nproc)
+RUN cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=/usr/bin/clang++ -DCMAKE_C_COMPILER=/usr/bin/clang && cmake --build build -j$(nproc)
 
 # --- Stage 2: Runtime ---
 FROM scratch

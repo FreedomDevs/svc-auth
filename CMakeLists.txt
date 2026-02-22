@@ -16,7 +16,8 @@ if(CCACHE_PROGRAM)
 endif()
 
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -s -DNDEBUG")
+set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} -s")
+set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -s")
 
 
 set(BUILD_EXAMPLES OFF)
@@ -38,14 +39,11 @@ add_subdirectory(libs/jwt-cpp)
 
 find_package(OpenSSL REQUIRED)
 
-# Добавляем include/ как include
-include_directories(${PROJECT_SOURCE_DIR}/include)
-
 # Компилируем все .cpp файлы в src
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 add_executable(svc-auth ${SOURCES})
 
-target_include_directories(svc-auth PRIVATE ${OPENSSL_INCLUDE_DIR})
-target_compile_options(svc-auth PRIVATE -Wall -Wextra -Wpedantic)
+target_include_directories(svc-auth PUBLIC ${PROJECT_SOURCE_DIR}/include ${OPENSSL_INCLUDE_DIR})
+target_compile_options(svc-auth PRIVATE -Wall -Wextra -Wpedantic -fno-modules)
 target_link_libraries(svc-auth PRIVATE drogon argon2 jwt-cpp ${OPENSSL_LIBRARIES})

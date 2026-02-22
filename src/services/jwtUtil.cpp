@@ -1,4 +1,5 @@
 #include "services/jwtUtil.hpp"
+#include <chrono>
 
 using namespace drogon;
 
@@ -25,7 +26,6 @@ std::string generateAccessToken(const AccessTokenData &data) {
   auto exp = now + std::chrono::seconds(config::JWT_TTL_SECONDS);
 
   auto token = jwt::create()
-                   .set_issuer("svc-auth")
                    .set_type("JWT")
                    .set_issued_at(iat)
                    .set_expires_at(exp)

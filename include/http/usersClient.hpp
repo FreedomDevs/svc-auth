@@ -7,8 +7,10 @@ class UsersClient {
 public:
   UsersClient(const std::string &baseUrl = "http://localhost:9002") : http_(baseUrl) {}
 
-  HttpResult<UserResponseDto> getUserById(std::string id) { return http_.get<UserResponseDto>("/users/" + id); }
-  HttpResult<UserResponseDto> createUser(const std::string &login, const std::string &hashedPassword) {
+  drogon::Task<HttpResult<UserResponseDto>> getUserById(std::string id, bool includePassword = false) {
+    return http_.get<UserResponseDto>("/users/" + id + "?psw=" + (includePassword ? "true" : "false"));
+  }
+  drogon::Task<HttpResult<UserResponseDto>> createUser(const std::string &login, const std::string &hashedPassword) {
     Json::Value body;
     body["name"] = login;
     body["password"] = hashedPassword;

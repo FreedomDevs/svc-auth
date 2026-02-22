@@ -1,5 +1,4 @@
 #pragma once
-
 #include "codes.hpp"
 #include <drogon/HttpResponse.h>
 #include <json/json.h>

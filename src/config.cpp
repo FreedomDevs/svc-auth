@@ -1,4 +1,7 @@
 #include "config.hpp"
+#include <algorithm>
+#include <fstream>
+#include <sstream>
 
 namespace config {
 

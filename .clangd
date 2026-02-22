@@ -1,3 +1,2 @@
 CompileFlags:
-  Remove: [ "-fmodules-ts", "-fmodule-mapper=*", "-fdeps-format=*" ]
-
+  Add: ["-I../include"]
