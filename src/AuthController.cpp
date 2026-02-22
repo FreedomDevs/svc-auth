@@ -142,6 +142,7 @@ public:
       std::string password = RequestCheck::requireString(request, *json, "password");
 
       UsersClient usersClient;
+      std::string clientIp = getClientIp(request);
 
       // Получаем информацию о игроке, включая его пароль
       auto userCheckResult = co_await usersClient.getUserById(login, true);
@@ -158,12 +159,12 @@ public:
       }
 
       if (!verifyPassword(*user.data.passwordHash, password)) {
-        std::string clientIp = getClientIp(request);
-
         if (!limiter.allow("ip:" + clientIp, 10, std::chrono::seconds(60))) {
+          LOG_WARN << "[AUTH][BRUTE_BLOCK] login=" << login << " ip=" << clientIp;
           co_return ResponseHandler::error(request, "Too many failed attempts from this IP", Codes::Error::TOO_MANY_ATTEMPTS);
         }
 
+        LOG_INFO << "[AUTH][LOGIN_FAILED] login=" << login << " ip=" << clientIp;
         co_return ResponseHandler::error(request, "Password invalid", Codes::Error::PASSWORD_INVALID);
       }
 
@@ -184,6 +185,7 @@ public:
       res["access_token"] = accessToken;
       res["refresh_token"] = refreshToken;
 
+      LOG_INFO << "[AUTH][LOGIN_SUCCESS] login=" << login << " userId=" << user.data.id << " ip=" << clientIp;
       co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
     } catch (const RequestCheck::ValidationError &error) {
       co_return error.response;
@@ -198,6 +200,7 @@ public:
       std::string password = RequestCheck::requireString(request, *json, "password");
 
       UsersClient usersClient;
+      std::string clientIp = getClientIp(request);
 
       // Получаем информацию о игроке, включая его пароль
       auto userCheckResult = co_await usersClient.getUserById(login, true);
@@ -215,15 +218,16 @@ public:
       }
 
       if (!verifyPassword(*user.data.passwordHash, password)) {
-        std::string clientIp = getClientIp(request);
-
         if (!limiter.allow("ip:" + clientIp, 10, std::chrono::seconds(60))) {
+          LOG_WARN << "[AUTH][BRUTE_BLOCK] login=" << login << " ip=" << clientIp;
           co_return ResponseHandler::error(request, "Too many failed attempts from this IP", Codes::Error::TOO_MANY_ATTEMPTS);
         }
 
+        LOG_INFO << "[AUTH][LOGIN_FAILED] login=" << login << " ip=" << clientIp;
         co_return ResponseHandler::error(request, "Password invalid", Codes::Error::PASSWORD_INVALID);
       }
 
+      LOG_INFO << "[AUTH][LOGIN_SUCCESS] login=" << login << " userId=" << user.data.id << " ip=" << clientIp;
       co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, Json::nullValue);
     } catch (const RequestCheck::ValidationError &error) {
       co_return error.response;
