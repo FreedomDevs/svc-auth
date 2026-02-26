@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:16
+    image: postgres:18-alpine
     container_name: svc-auth-postgres
 
     environment:
@@ -8,11 +8,26 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: svc-auth
 
-    ports:
-      - "8007:5432"
-
     volumes:
       - db:/var/lib/postgresql/data
+
+    networks:
+      net:
+        ipv6_address: fd98:2dd6:8f48:1d99:22e6:f8c8::2 # Вот здесь надо заменить xxxx:xxxx на случайные HEX символы типо fa01:1235
+
+
+networks:
+  net:
+    enable_ipv6: true
+    enable_ipv4: false
+    driver_opts:
+      com.docker.network.driver.mtu: "65535"
+    ipam:
+      config:
+        - subnet: fd98:2dd6:8f48:1d99:22e6:f8c8::/96 # Тут надо вставить тоже самое что и в IP адресе выше
+  host_bridge:
+    external: true
+    name: bridge
 
 volumes:
   db:

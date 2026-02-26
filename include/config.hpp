@@ -37,6 +37,7 @@ inline void loadConfig() {
   MAX_GAME_TOKENS_BEFORE_GC = getEnvIntOrDefault("MAX_GAME_TOKENS_BEFORE_GC", 500);
 
   DB_CONNECTIONS_POOL_SIZE = getEnvIntOrDefault("DB_CONNECTIONS_POOL_SIZE", 3);
-  DB_CONNECT_STRING = getEnvOrDefault("DB_CONNECT_STRING", "dbname=svc-auth user=postgres password=postgres host=127.0.0.1 port=8007");
+  DB_CONNECT_STRING = getEnvOrDefault("DB_CONNECT_STRING",
+                                      "dbname=svc-auth user=postgres password=postgres host=fd98:2dd6:8f48:1d99:22e6:f8c8::2 port=5432");
 }
 } // namespace config
