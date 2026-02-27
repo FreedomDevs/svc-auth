@@ -1,7 +1,7 @@
 services:
   postgres:
-    image: postgres:18-alpine
     container_name: svc-auth-postgres
+    image: postgres:18-alpine
 
     environment:
       POSTGRES_USER: postgres
@@ -13,8 +13,32 @@ services:
 
     networks:
       net:
-        ipv6_address: fd98:2dd6:8f48:1d99:22e6:f8c8::2 # Вот здесь надо заменить xxxx:xxxx на случайные HEX символы типо fa01:1235
+        ipv6_address: fd98:2dd6:8f48:1d99:22e6:f8c8::3
+  
+  app-dev:
+    container_name: svc-auth-app-dev
+    build:
+      context: .
+      dockerfile: Dockerfile-test
+    volumes:
+      - ./src:/app/src:ro
+      - ./include:/app/include:ro
+      - ./libs:/app/libs:ro
+      - ./secrets:/app/secrets:ro
+      - ./CMakeLists.txt:/app/CMakeLists.txt:ro
+      - ccache_volume:/ccache
+    environment:
+      CC: ccache clang
+      CXX: ccache clang++
+      CCACHE_DIR: /ccache
+    depends_on:
+      - postgres
+    cap_add:
+      - SYS_ADMIN
 
+    networks:
+      net:
+        ipv6_address: fd98:2dd6:8f48:1d99:22e6:f8c8::2
 
 networks:
   net:
@@ -24,10 +48,11 @@ networks:
       com.docker.network.driver.mtu: "65535"
     ipam:
       config:
-        - subnet: fd98:2dd6:8f48:1d99:22e6:f8c8::/96 # Тут надо вставить тоже самое что и в IP адресе выше
+        - subnet: fd98:2dd6:8f48:1d99:22e6:f8c8::/96
   host_bridge:
     external: true
     name: bridge
 
 volumes:
   db:
+  ccache_volume:

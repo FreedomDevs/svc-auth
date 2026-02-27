@@ -1,0 +1,28 @@
+#!/bin/sh
+
+# Проверяем наличие аргумента
+ACTION=$1
+
+case "$ACTION" in
+    "recompile")
+        # Находим ID процесса или просто шлем сигнал через docker kill
+        exec docker compose exec app-dev kill -USR1 1
+        ;;
+    
+    "restart")
+        exec docker compose restart app-dev
+        ;;
+    
+    "rebuild")
+        docker compose build app-dev || exit 1
+        exec docker compose up -d app-dev
+        ;;
+    "logs")
+        exec docker logs svc-auth-app-dev -f
+        ;;
+    
+    *)
+        echo "Usage: $0 {recompile|restart|rebuild|logs}"
+        exit 1
+        ;;
+esac

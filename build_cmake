@@ -1,0 +1,3 @@
+#!/bin/sh
+rm -r build || exit 1
+CC=clang CXX=clang++ exec cmake -G Ninja -S . -B build -DCMAKE_BUILD_TYPE=Debug
