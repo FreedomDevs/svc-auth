@@ -1,0 +1,6 @@
+FROM alpine:3.23 AS builder
+
+# Ставим инструменты для сборки и дебага
+RUN apk add --no-cache clang cmake pkgconfig postgresql-dev samurai util-linux-dev jsoncpp-dev zlib-dev argon2-dev gdb
+
+WORKDIR /app

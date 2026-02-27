@@ -22,7 +22,7 @@ case "$MODE" in
         ;;
     *)
         echo "Unknown mode: $MODE"
-        echo "Usage: $0 {build|native|cmake|run}"
+        echo "Usage: $0 {build|cmake|run}"
         exit 1
         ;;
 esac

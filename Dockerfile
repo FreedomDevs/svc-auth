@@ -1,5 +1,5 @@
 # --- Stage 1: Build ---
-FROM alpine:3.23.2 AS builder
+FROM alpine:3.23 AS builder
 
 # Ставим инструменты для сборки
 RUN apk add --no-cache clang cmake pkgconfig postgresql-dev samurai util-linux-dev jsoncpp-dev zlib-dev argon2-dev
