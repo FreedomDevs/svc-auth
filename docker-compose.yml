@@ -34,7 +34,9 @@ services:
     depends_on:
       - postgres
     cap_add:
-      - SYS_ADMIN
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
 
     networks:
       net:
