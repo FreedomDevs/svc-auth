@@ -33,6 +33,7 @@ public:
 
   Task<HttpResponsePtr> registerEndpoint(HttpRequestPtr request) {
     try {
+      LOG_INFO << "4";
       const Json::Value *json = RequestCheck::requireJson(request);
 
       std::string login = RequestCheck::requireString(request, *json, "login");

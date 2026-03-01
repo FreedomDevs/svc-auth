@@ -1,11 +1,12 @@
 #pragma once
+#include "config.hpp"
 #include "dto/userResponseDto.hpp"
 #include "http/httpResult.hpp"
 #include "httpClient.hpp"
 
 class UsersClient {
 public:
-  UsersClient(const std::string &baseUrl = "http://localhost:9002") : http_(baseUrl) {}
+  UsersClient() : http_(config::USER_SERVICE_URL) {}
 
   drogon::Task<HttpResult<UserResponseDto>> getUserById(std::string id, bool includePassword = false) {
     return http_.get<UserResponseDto>("/users/" + id + "?psw=" + (includePassword ? "true" : "false"));

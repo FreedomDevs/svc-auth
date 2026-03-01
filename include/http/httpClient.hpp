@@ -39,7 +39,6 @@ private:
         req->setMethod(method);
         req->setPath(path);
 
-        LOG_INFO << "3";
         if constexpr (!std::is_same_v<Req, std::monostate>) {
           req->setContentTypeCode(drogon::CT_APPLICATION_JSON);
 
@@ -57,6 +56,7 @@ private:
 
         drogon::HttpResponsePtr resp = co_await client_->sendRequestCoro(req, timeoutSec);
 
+        LOG_INFO << "5";
         if (resp->getStatusCode() >= 300) {
           co_return HttpError{HttpErrorType::HttpStatus, resp->getStatusCode(), std::string(resp->getBody())};
         }

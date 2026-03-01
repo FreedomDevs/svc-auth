@@ -1,5 +1,4 @@
-#include "services/jwtUtil.hpp"
-#include "services/uuidUtils.hpp"
+#include "config.hpp"
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <trantor/utils/Logger.h>
@@ -15,22 +14,21 @@ void preconfigurateSocket(int fd) {
   if (setsockopt(fd, IPPROTO_TCP, TCP_FASTOPEN, &enable, sizeof(enable)) == -1) {
     LOG_INFO << "setsockopt TCP_FASTOPEN failed";
   }
-
-  // Вклчаем dual-stack, IPv6 + IPv4
-  int off = 0;
-  if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(off)) == -1) {
-    LOG_INFO << "setsockopt IPV6_V6ONLY failed";
-  }
 }
 
 int main() {
   config::loadConfig();
 
-  AccessTokenData token{UUID::fromString("71b911d4-14bc-4f5b-b66a-477974c4de0d"),
-                        {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}};
+  // Магия для docker
+  setvbuf(stdout, NULL, _IOLBF, BUFSIZ);
+  setvbuf(stderr, NULL, _IOLBF, BUFSIZ);
 
-  auto tokean = generateAccessToken(token);
-  LOG_INFO << verifyAccessToken(tokean).has_value();
+  // Выставляем уровень подробности логов
+#ifdef NDEBUG
+  app().setLogLevel(trantor::Logger::kInfo);
+#else
+  app().setLogLevel(trantor::Logger::kTrace);
+#endif
 
   app().setBeforeListenSockOptCallback(preconfigurateSocket).addListener("::", 9007);
   initDatabase();
