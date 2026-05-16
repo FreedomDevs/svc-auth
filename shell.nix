@@ -6,7 +6,7 @@ pkgs.mkShell {
     ninja
     gdb
 
-    postgresql
+    postgresql.dev
     jsoncpp
     libuuid
     zlib
