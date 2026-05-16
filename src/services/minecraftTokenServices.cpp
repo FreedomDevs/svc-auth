@@ -26,7 +26,7 @@ uint64_t generateToken() {
   return token;
 } // Интересный факт, комменты реально я писал, не гпт
 
-uint64_t createTokenForUser(const UUID &userUUID) {
+uint64_t createTokenForUser(const UUID &userUUID, const std::string &username) {
   std::unique_lock<std::mutex> lock(globalMutex);
   auto now = std::chrono::steady_clock::now();
 
@@ -41,7 +41,7 @@ uint64_t createTokenForUser(const UUID &userUUID) {
   }
 
   // Создаём переменную, TTL у нас 10 секунд
-  Token token = Token(generateToken(), userUUID, now + std::chrono::seconds(10));
+  Token token = Token(username, generateToken(), userUUID, now + std::chrono::seconds(10));
   uint64_t key = token.value;
 
   if (tokenIndex.size() > config::MAX_GAME_TOKENS_BEFORE_GC && now - lastGcTime > std::chrono::seconds(5))
@@ -54,36 +54,34 @@ uint64_t createTokenForUser(const UUID &userUUID) {
   return key;
 }
 
-bool popToken(const uint64_t &token, const UUID &userUUID) {
+std::optional<Token> popToken(const uint64_t &token) {
   std::unique_lock<std::mutex> lock(globalMutex);
 
   auto it = tokenIndex.find(token);
   if (it == tokenIndex.end()) {
     lock.unlock();
-    LOG_WARN << "Попытка " << userUUID.toString() << " войти по токену, но он не существует";
-    return false;
-  }
-  if (it->second.userUUID != userUUID) {
-    lock.unlock();
-    LOG_WARN << "Попытка " << userUUID.toString() << " войти по токену, но не принадлежит ему";
-    return false;
+    LOG_WARN << "Попытка войти по токену \"" + std::format("{:x}", token) + "\", но он не существует";
+    return std::nullopt;
   }
 
   // Прверяем TTL
   auto now = std::chrono::steady_clock::now();
   if (now > it->second.expiry) {
     tokenIndex.erase(it);
-    uuidIndex.erase(userUUID);
+    uuidIndex.erase(it->second.userUUID);
 
     lock.unlock();
-    LOG_WARN << "Попытка " << userUUID.toString() << " войти по токену, но он устарел";
-    return false;
+    LOG_WARN << "Попытка " << it->second.userUUID.toString() << " войти по токену \"" + std::format("{:x}", token) + "\", но он устарел";
+    return std::nullopt;
   }
+
+  auto result = std::move(it->second);
 
   // Удаляем токен если он действителен, так как он одноразовый
   tokenIndex.erase(it);
-  uuidIndex.erase(userUUID);
-  return true;
+  uuidIndex.erase(result.userUUID);
+
+  return result;
 }
 
 // ДОЛЖЕН ВЫЗЫВАТСЯ ПОД МЬЮТЕКСОМ УЖЕ

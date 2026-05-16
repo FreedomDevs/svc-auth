@@ -1,6 +1,7 @@
 #include "db/Repository.hpp"
 #include "db/DBManager.hpp"
 #include "drogon/utils/coroutine.h"
+#include "services/uuidUtils.hpp"
 #include <drogon/orm/Result.h>
 #include <iostream>
 
@@ -106,8 +107,9 @@ drogon::Task<bool> IntegrationRepo::set2FA(const std::string &userId, TwoFAType 
     co_return false;
 
   try {
-    auto r = (type == TwoFAType::None) ? co_await getDatabase()->execSqlCoro("UPDATE integrations SET twofa=NULL WHERE userId=$1", userId)
-                                       : co_await getDatabase()->execSqlCoro("UPDATE integrations SET twofa=$1 WHERE userId=$2", toString(type), userId);
+    auto r = (type == TwoFAType::None)
+                 ? co_await getDatabase()->execSqlCoro("UPDATE integrations SET twofa=NULL WHERE userId=$1", userId)
+                 : co_await getDatabase()->execSqlCoro("UPDATE integrations SET twofa=$1 WHERE userId=$2", toString(type), userId);
 
     int affected = r.affectedRows();
     if (affected <= 0) {
@@ -243,20 +245,20 @@ drogon::Task<bool> IntegrationRepo::resetDiscordId(const std::string &userId) {
  * @param ttlSeconds Время жизни токена в секундах
  * @return true, если токен успешно сохранён, false если ошибка или ttlSeconds <= 0
  */
-drogon::Task<bool> RefreshTokenRepo::save(const std::string &userId, const std::string &tokenHash, int ttlSeconds) {
-  if (userId.empty() || tokenHash.empty() || ttlSeconds <= 0)
+drogon::Task<bool> RefreshTokenRepo::save(const UUID &userId, const std::array<uint8_t, 32> &tokenHash, int ttlSeconds) {
+  if (tokenHash.empty() || ttlSeconds <= 0)
     co_return false;
 
   try {
     co_await getDatabase()->execSqlCoro("INSERT INTO refresh_tokens(userId, tokenHash, expires_at) "
                                         "VALUES ($1, $2, NOW() + ($3 || ' seconds')::interval)",
-                                        userId, tokenHash, ttlSeconds);
+                                        userId.toString(), tokenHash, ttlSeconds);
     co_return false;
   } catch (const std::exception &e) {
     std::cerr << "Failed to save refresh token: " << e.what() << std::endl;
     co_return false;
   } catch (...) {
-    std::cerr << "Unknown error in save() for userId=" << userId << std::endl;
+    std::cerr << "Unknown error in save() for userId=" << userId.toString() << std::endl;
     co_return false;
   }
 }
@@ -266,12 +268,12 @@ drogon::Task<bool> RefreshTokenRepo::save(const std::string &userId, const std::
  * @param tokenHash Хэш токена
  * @return std::optional<RefreshToken> — объект RefreshToken, если найден, иначе std::nullopt
  */
-drogon::Task<std::optional<RefreshToken>> RefreshTokenRepo::getByHash(const std::string &tokenHash) {
+drogon::Task<std::optional<RefreshToken>> RefreshTokenRepo::getByHash(const std::array<uint8_t, 32> &tokenHash) {
   if (tokenHash.empty())
     co_return std::nullopt;
 
   try {
-    auto r = co_await getDatabase()->execSqlCoro("SELECT id, userId, tokenHash, expires_at "
+    auto r = co_await getDatabase()->execSqlCoro("SELECT userId, tokenHash, description, expires_at "
                                                  "FROM refresh_tokens "
                                                  "WHERE tokenHash=$1 AND expires_at > NOW()",
                                                  tokenHash);
@@ -280,9 +282,17 @@ drogon::Task<std::optional<RefreshToken>> RefreshTokenRepo::getByHash(const std:
       co_return std::nullopt;
 
     RefreshToken t;
-    t.id = r[0]["id"].as<int>();
-    t.userId = r[0]["userid"].as<std::string>();
-    t.tokenHash = r[0]["tokenhash"].as<std::string>();
+    t.userId = UUID::fromString(r[0]["userId"].as<std::string>());
+    t.description = r[0]["description"].as<std::string>();
+
+    auto rawBytes = r[0]["tokenHash"].as<std::vector<uint8_t>>();
+
+    if (rawBytes.size() != 32) {
+      std::cerr << "Database returned invalid hash length: " + std::to_string(rawBytes.size()) << std::endl;
+      co_return std::nullopt;
+    }
+
+    std::copy(rawBytes.begin(), rawBytes.end(), t.tokenHash.begin());
 
     std::string tsStr = r[0]["expires_at"].as<std::string>();
     std::tm tm = {};
@@ -307,15 +317,12 @@ drogon::Task<std::optional<RefreshToken>> RefreshTokenRepo::getByHash(const std:
  * @param userId Идентификатор пользователя
  * @return true, если хотя бы один токен удалён, false если пользователь не найден или ошибка
  */
-drogon::Task<bool> RefreshTokenRepo::deleteByUserId(const std::string &userId) {
-  if (userId.empty())
-    co_return false;
-
+drogon::Task<bool> RefreshTokenRepo::deleteByUserId(const UUID &userId) {
   try {
-    auto r = co_await getDatabase()->execSqlCoro("DELETE FROM refresh_tokens WHERE userId=$1", userId);
+    auto r = co_await getDatabase()->execSqlCoro("DELETE FROM refresh_tokens WHERE userId=$1", userId.toString());
     co_return r.affectedRows() > 0;
   } catch (const std::exception &e) {
-    std::cerr << "Failed to delete refresh tokens for userId=" << userId << ": " << e.what() << std::endl;
+    std::cerr << "Failed to delete refresh tokens for userId=" << userId.toString() << ": " << e.what() << std::endl;
     co_return false;
   }
 }
@@ -325,10 +332,7 @@ drogon::Task<bool> RefreshTokenRepo::deleteByUserId(const std::string &userId) {
  * @param tokenHash Хэш токена
  * @return true, если токен успешно удалён, false если токен не найден или произошла ошибка
  */
-drogon::Task<bool> RefreshTokenRepo::deleteByHash(const std::string &tokenHash) {
-  if (tokenHash.empty())
-    co_return false;
-
+drogon::Task<bool> RefreshTokenRepo::deleteByHash(const std::array<uint8_t, 32> &tokenHash) {
   try {
     auto r = co_await getDatabase()->execSqlCoro("DELETE FROM refresh_tokens WHERE tokenHash=$1", tokenHash);
     co_return r.affectedRows() > 0;
@@ -343,15 +347,12 @@ drogon::Task<bool> RefreshTokenRepo::deleteByHash(const std::string &tokenHash) 
  * @param userId Идентификатор пользователя
  * @return true, если удалён хотя бы один токен, false если токены не найдены или произошла ошибка
  */
-drogon::Task<bool> RefreshTokenRepo::deleteExpiredByUserId(const std::string &userId) {
-  if (userId.empty())
-    co_return false;
-
+drogon::Task<bool> RefreshTokenRepo::deleteExpiredByUserId(const UUID &userId) {
   try {
-    auto r = co_await getDatabase()->execSqlCoro("DELETE FROM refresh_tokens WHERE userId=$1 AND expires_at <= NOW()", userId);
+    auto r = co_await getDatabase()->execSqlCoro("DELETE FROM refresh_tokens WHERE userId=$1 AND expires_at <= NOW()", userId.toString());
     co_return r.affectedRows() > 0;
   } catch (const std::exception &e) {
-    std::cerr << "Failed to delete expired refresh tokens for userId=" << userId << ": " << e.what() << std::endl;
+    std::cerr << "Failed to delete expired refresh tokens for userId=" << userId.toString() << ": " << e.what() << std::endl;
     co_return false;
   }
 }

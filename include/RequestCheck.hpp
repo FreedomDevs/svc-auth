@@ -1,4 +1,5 @@
 #pragma once
+#include "db/Repository.hpp"
 #include "drogon/HttpResponse.h"
 #include <drogon/HttpController.h>
 
@@ -13,6 +14,8 @@ struct ValidationError : public std::exception {
 
 const Json::Value *requireJson(const drogon::HttpRequestPtr &request);
 std::string requireString(const drogon::HttpRequestPtr &request, const Json::Value &json, const std::string &field);
+drogon::Task<Repository::RefreshToken> requireRefreshToken(const drogon::HttpRequestPtr &request, const Json::Value &json,
+                                                           const std::string &field);
 void requireOneOf(const drogon::HttpRequestPtr &request, const std::string &field, const std::string &value,
                   const std::initializer_list<std::string> &allowed);
 

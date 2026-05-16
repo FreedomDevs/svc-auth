@@ -1,6 +1,7 @@
 #include "RequestCheck.hpp"
 #include "ResponseHandler.hpp"
 #include "codes.hpp"
+#include "db/Repository.hpp"
 #include "drogon/HttpResponse.h"
 #include "drogon/HttpTypes.h"
 #include "dto/userDto.hpp"
@@ -18,6 +19,7 @@
 #include <endian.h>
 #include <json/config.h>
 #include <json/value.h>
+#include <stdexcept>
 using namespace drogon;
 
 class AuthController : public HttpController<AuthController> {
@@ -29,6 +31,7 @@ public:
   ADD_METHOD_TO(AuthController::altLoginEndpoint, "/auth/alt/login", Post, "TraceIdMiddleware", "LoggerMiddleware");
   ADD_METHOD_TO(AuthController::refreshEndpoint, "/auth/refresh", Post, "TraceIdMiddleware", "LoggerMiddleware");
   ADD_METHOD_TO(AuthController::popGameTokenEndpoint, "/auth/pop_game_token", Post, "TraceIdMiddleware", "LoggerMiddleware");
+  ADD_METHOD_TO(AuthController::checkRefreshTokenEndpoint, "/auth/check_refresh_token", Post, "TraceIdMiddleware", "LoggerMiddleware");
   METHOD_LIST_END
 
   Task<HttpResponsePtr> registerEndpoint(HttpRequestPtr request) {
@@ -72,6 +75,11 @@ public:
       std::vector<uint8_t> refreshData(32);
       utils::secureRandomBytes(refreshData.data(), refreshData.size());
       auto refreshTokenHash = getRefreshTokenHash(refreshData);
+
+      bool result = co_await Repository::RefreshTokenRepo::save(UUID::fromString(createdUser.data.id), refreshTokenHash, 30 * 24 * 60 * 60);
+      if (!result) {
+        throw std::runtime_error("Не удалось сохранить refresh token");
+      }
 
       AccessTokenData tokenData;
       tokenData.uuid = UUID::fromString(createdUser.data.id);
@@ -127,7 +135,23 @@ public:
         co_return ResponseHandler::error(request, "User creation failed: " + err.message, Codes::Error::USER_CREATION_FAILED);
       }
 
-      co_return ResponseHandler::success(request, Codes::Success::REGISTRATION_SUCCESS, Json::nullValue);
+      UserResponseDto createdUser = std::get<UserResponseDto>(createResult);
+
+      std::vector<uint8_t> refreshData(32);
+      utils::secureRandomBytes(refreshData.data(), refreshData.size());
+      auto refreshTokenHash = getRefreshTokenHash(refreshData);
+
+      bool result = co_await Repository::RefreshTokenRepo::save(UUID::fromString(createdUser.data.id), refreshTokenHash, 30 * 24 * 60 * 60);
+      if (!result) {
+        throw std::runtime_error("Не удалось сохранить refresh token");
+      }
+
+      std::string refreshToken = utils::base64Encode(refreshData.data(), refreshData.size());
+
+      Json::Value res;
+      res["refresh_token"] = refreshToken;
+
+      co_return ResponseHandler::success(request, Codes::Success::REGISTRATION_SUCCESS, res);
     } catch (const RequestCheck::ValidationError &error) {
       co_return error.response;
     } catch (const std::exception &ex) {
@@ -159,12 +183,12 @@ public:
         throw std::logic_error("Password hash is null");
       }
 
-      if (!verifyPassword(*user.data.passwordHash, password)) {
-        if (!limiter.allow("ip:" + clientIp, 10, std::chrono::seconds(60))) {
-          LOG_WARN << "[AUTH][BRUTE_BLOCK] login=" << login << " ip=" << clientIp;
-          co_return ResponseHandler::error(request, "Too many failed attempts from this IP", Codes::Error::TOO_MANY_ATTEMPTS);
-        }
+      if (!limiter.allow("ip:" + clientIp, 10, std::chrono::seconds(60))) {
+        LOG_WARN << "[AUTH][BRUTE_BLOCK] login=" << login << " ip=" << clientIp;
+        co_return ResponseHandler::error(request, "Too many failed attempts from this IP", Codes::Error::TOO_MANY_ATTEMPTS);
+      }
 
+      if (!verifyPassword(*user.data.passwordHash, password)) {
         LOG_INFO << "[AUTH][LOGIN_FAILED] login=" << login << " ip=" << clientIp;
         co_return ResponseHandler::error(request, "Password invalid", Codes::Error::PASSWORD_INVALID);
       }
@@ -173,6 +197,11 @@ public:
       std::vector<uint8_t> refreshData(32);
       utils::secureRandomBytes(refreshData.data(), refreshData.size());
       auto refreshTokenHash = getRefreshTokenHash(refreshData);
+
+      bool result = co_await Repository::RefreshTokenRepo::save(UUID::fromString(user.data.id), refreshTokenHash, 30 * 24 * 60 * 60);
+      if (!result) {
+        throw std::runtime_error("Не удалось сохранить refresh token");
+      }
 
       // Делаем access_token
       AccessTokenData tokenData;
@@ -219,47 +248,72 @@ public:
       }
 
       if (!verifyPassword(*user.data.passwordHash, password)) {
-        if (!limiter.allow("ip:" + clientIp, 10, std::chrono::seconds(60))) {
-          LOG_WARN << "[AUTH][BRUTE_BLOCK] login=" << login << " ip=" << clientIp;
-          co_return ResponseHandler::error(request, "Too many failed attempts from this IP", Codes::Error::TOO_MANY_ATTEMPTS);
-        }
-
         LOG_INFO << "[AUTH][LOGIN_FAILED] login=" << login << " ip=" << clientIp;
         co_return ResponseHandler::error(request, "Password invalid", Codes::Error::PASSWORD_INVALID);
       }
 
+      std::vector<uint8_t> refreshData(32);
+      utils::secureRandomBytes(refreshData.data(), refreshData.size());
+      auto refreshTokenHash = getRefreshTokenHash(refreshData);
+
+      bool result = co_await Repository::RefreshTokenRepo::save(UUID::fromString(user.data.id), refreshTokenHash, 30 * 24 * 60 * 60);
+      if (!result) {
+        throw std::runtime_error("Не удалось сохранить refresh token");
+      }
+
       LOG_INFO << "[AUTH][LOGIN_SUCCESS] login=" << login << " userId=" << user.data.id << " ip=" << clientIp;
-      co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, Json::nullValue);
-    } catch (const RequestCheck::ValidationError &error) {
-      co_return error.response;
-    }
-  }
 
-  Task<HttpResponsePtr> refreshEndpoint(HttpRequestPtr request) { // TODO СДЕЛАТЬ
-    try {
-      const Json::Value *json = RequestCheck::requireJson(request);
-
-      std::string refreshToken = RequestCheck::requireString(request, *json, "refresh_token");
-      std::string method = RequestCheck::requireString(request, *json, "method");
-      RequestCheck::requireOneOf(request, "method", method, {"Web", "Game"});
-
-      UUID uuid = UUID::fromString("372d8631-754c-47d5-9465-4efa4fd3b0e5");
-
-      std::vector<char> refreshTokenData = utils::base64DecodeToVector(refreshToken);
-
-      uint64_t token = createTokenForUser(uuid);
-      uint8_t *bytes = reinterpret_cast<uint8_t *>(&token);
+      std::string refreshToken = utils::base64Encode(refreshData.data(), refreshData.size());
 
       Json::Value res;
-      res["token"] = utils::base64Encode(bytes, 8);
-
+      res["refresh_token"] = refreshToken;
       co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
     } catch (const RequestCheck::ValidationError &error) {
       co_return error.response;
     }
   }
 
-  Task<HttpResponsePtr> popGameTokenEndpoint(HttpRequestPtr request) { // TODO СДЕЛАТЬ
+  Task<HttpResponsePtr> refreshEndpoint(HttpRequestPtr request) {
+    try {
+      const Json::Value *json = RequestCheck::requireJson(request);
+
+      std::string method = RequestCheck::requireString(request, *json, "method");
+      RequestCheck::requireOneOf(request, "method", method, {"Web", "Game"});
+
+      Repository::RefreshToken refreshToken = co_await RequestCheck::requireRefreshToken(request, *json, "refresh_token");
+
+      UUID uuid = refreshToken.userId;
+
+      if (method == "Game") {
+        uint64_t token = createTokenForUser(uuid);
+        uint8_t *bytes = reinterpret_cast<uint8_t *>(&token);
+
+        Json::Value res;
+        res["token"] = utils::base64Encode(bytes, 8);
+
+        co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
+      } else if (method == "Web") {
+        AccessTokenData tokenData;
+        tokenData.uuid = uuid;
+        tokenData.tokenHash = refreshToken.tokenHash;
+
+        std::string accessToken = generateAccessToken(tokenData);
+
+        Json::Value res;
+        res["token"] = accessToken;
+
+        co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
+      } else {
+        throw std::runtime_error("Unexpected method " + method);
+      }
+    } catch (const RequestCheck::ValidationError &error) {
+      co_return error.response;
+    } catch (const std::exception &ex) {
+      co_return ResponseHandler::error(request, "Unexpected error: " + std::string(ex.what()), Codes::Error::USER_CREATION_FAILED);
+    }
+  }
+
+  Task<HttpResponsePtr> popGameTokenEndpoint(HttpRequestPtr request) {
     try {
       const Json::Value *json = RequestCheck::requireJson(request);
 
@@ -272,18 +326,48 @@ public:
       uint64_t token = 0;
       std::memcpy(&token, data.data(), sizeof(uint64_t));
 
-      UUID uuid = UUID::fromString("372d8631-754c-47d5-9465-4efa4fd3b0e5");
+      std::optional<Token> result = popToken(token);
+      if (!result.has_value()) {
+        co_return ResponseHandler::error(request, Codes::Error::GAME_TOKEN_INVALID);
+      }
 
-      bool result = popToken(token, uuid);
       Json::Value res;
-      res["result"] = result;
+      res["uuid"] = result->userUUID.toString();
+      res["username"] = result->username;
 
-      if (result)
-        co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
-      else
-        co_return ResponseHandler::error(request, Codes::Error::AUTH_FAILED);
+      co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
     } catch (const RequestCheck::ValidationError &error) {
       co_return error.response;
+    } catch (const std::exception &ex) {
+      co_return ResponseHandler::error(request, "Unexpected error: " + std::string(ex.what()), Codes::Error::USER_CREATION_FAILED);
+    }
+  }
+
+  Task<HttpResponsePtr> checkRefreshTokenEndpoint(HttpRequestPtr request) {
+    try {
+      const Json::Value *json = RequestCheck::requireJson(request);
+      Repository::RefreshToken refreshToken = co_await RequestCheck::requireRefreshToken(request, *json, "refresh_token");
+      UsersClient usersClient;
+
+      // Получаем информацию о игроке, включая его пароль
+      auto userCheckResult = co_await usersClient.getUserById(refreshToken.userId.toString());
+      if (std::holds_alternative<HttpError>(userCheckResult)) {
+        auto err = std::get<HttpError>(userCheckResult);
+        if (err.httpStatus != 404) {
+          co_return ResponseHandler::error(request, "Error checking user existence: " + err.message, Codes::Error::AUTH_FAILED);
+        }
+      }
+      UserResponseDto user = std::get<UserResponseDto>(userCheckResult);
+
+      Json::Value res;
+      res["uuid"] = refreshToken.userId.toString();
+      res["username"] = user.data.name;
+
+      co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
+    } catch (const RequestCheck::ValidationError &error) {
+      co_return error.response;
+    } catch (const std::exception &ex) {
+      co_return ResponseHandler::error(request, "Unexpected error: " + std::string(ex.what()), Codes::Error::USER_CREATION_FAILED);
     }
   }
 

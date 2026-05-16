@@ -14,9 +14,9 @@ CREATE TABLE IF NOT EXISTS integrations (
 )";
 const std::string REFRESH_TOKENS_TABLE = R"(
 CREATE TABLE IF NOT EXISTS refresh_tokens (
-  id SERIAL PRIMARY KEY,
+  tokenHash BYTEA PRIMARY KEY NOT NULL,
   userId UUID NOT NULL,
-  tokenHash BYTEA NOT NULL,
+  description TEXT,
   expires_at TIMESTAMP NOT NULL
 );
 )";

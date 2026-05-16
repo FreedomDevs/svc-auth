@@ -28,4 +28,27 @@ void requireOneOf(const drogon::HttpRequestPtr &request, const std::string &fiel
     throw ValidationError(ResponseHandler::error(request, field + " has incorrect value", Codes::Error::METHOD_INCORRECT));
 }
 
+drogon::Task<Repository::RefreshToken> requireRefreshToken(const drogon::HttpRequestPtr &request, const Json::Value &json,
+                                                           const std::string &field) {
+  std::string refreshToken = RequestCheck::requireString(request, json, field);
+  if (refreshToken.size() != 44) {
+    throw ValidationError(ResponseHandler::error(request, "Refresh token has invalid length", Codes::Error::REFRESH_TOKEN_INVALID));
+  }
+
+  std::string decoded = drogon::utils::base64Decode(refreshToken);
+  if (decoded.size() != 32) {
+    throw ValidationError(ResponseHandler::error(request, "Refresh token has invalid length", Codes::Error::REFRESH_TOKEN_INVALID));
+  }
+
+  std::array<uint8_t, 32> shaHash;
+  std::copy(decoded.begin(), decoded.end(), shaHash.begin());
+
+  std::optional<Repository::RefreshToken> refreshTokenData = co_await Repository::RefreshTokenRepo::getByHash(shaHash);
+  if (!refreshTokenData.has_value()) {
+    throw ValidationError(ResponseHandler::error(request, "Refresh token invalid", Codes::Error::REFRESH_TOKEN_INVALID));
+  }
+
+  co_return std::move(*refreshTokenData);
+}
+
 } // namespace RequestCheck

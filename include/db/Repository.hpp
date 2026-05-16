@@ -1,4 +1,5 @@
 #pragma once
+#include "services/uuidUtils.hpp"
 #include <chrono>
 #include <drogon/orm/Result.h>
 #include <drogon/utils/coroutine.h>
@@ -57,19 +58,19 @@ private:
 };
 
 struct RefreshToken {
-  int id;
-  std::string userId;
-  std::string tokenHash;
+  UUID userId;
+  std::array<uint8_t, 32> tokenHash;
+  std::string description;
   std::chrono::system_clock::time_point expiresAt;
 };
 
 class RefreshTokenRepo {
 public:
-  static drogon::Task<bool> save(const std::string &userId, const std::string &tokenHash, int ttlSeconds);
-  static drogon::Task<std::optional<RefreshToken>> getByHash(const std::string &tokenHash);
-  static drogon::Task<bool> deleteByUserId(const std::string &userId);
-  static drogon::Task<bool> deleteByHash(const std::string &tokenHash);
-  static drogon::Task<bool> deleteExpiredByUserId(const std::string &userId);
+  static drogon::Task<bool> save(const UUID &userId, const std::array<uint8_t, 32> &tokenHash, int ttlSeconds);
+  static drogon::Task<std::optional<RefreshToken>> getByHash(const std::array<uint8_t, 32> &tokenHash);
+  static drogon::Task<bool> deleteByUserId(const UUID &userId);
+  static drogon::Task<bool> deleteByHash(const std::array<uint8_t, 32> &tokenHash);
+  static drogon::Task<bool> deleteExpiredByUserId(const UUID &userId);
   static drogon::Task<bool> deleteAllExpired();
 };
 

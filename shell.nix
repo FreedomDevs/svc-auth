@@ -1,16 +1,20 @@
 {pkgs ? import <nixpkgs> {}}:
 pkgs.mkShell {
-  buildInputs = with pkgs; [
-    clang
+nativeBuildInputs = with pkgs; [
     cmake
     ninja
     gdb
+    clang-tools
+    clang
+  ];
 
-    postgresql.dev
+  buildInputs = with pkgs; [
+    postgresql
     jsoncpp
     libuuid
     zlib
     openssl
+    libargon2
   ];
 
   CPATH = "${pkgs.glibc.dev}/include";

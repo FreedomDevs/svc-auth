@@ -3,6 +3,7 @@
 #include "dto/userResponseDto.hpp"
 #include "http/httpResult.hpp"
 #include "httpClient.hpp"
+#include "trantor/utils/Logger.h"
 
 class UsersClient {
 public:
@@ -18,7 +19,7 @@ public:
     // Logs
     Json::StreamWriterBuilder writer;
     std::string jsonStr = Json::writeString(writer, body);
-    std::cout << "[UsersClient::createUser] Payload: " << jsonStr << std::endl;
+    LOG_INFO << "[UsersClient::createUser] Payload: " << jsonStr;
 
     return http_.post<Json::Value, UserResponseDto>("/users", body);
   }
