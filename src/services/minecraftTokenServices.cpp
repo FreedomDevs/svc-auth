@@ -7,12 +7,33 @@
 #include <unordered_map>
 using namespace drogon;
 
+namespace {
 std::unordered_map<uint64_t, Token> tokenIndex;
 std::unordered_map<UUID, uint64_t> uuidIndex;
 
 std::mutex globalMutex;
 
 std::chrono::steady_clock::time_point lastGcTime{}; // нулевая дата
+
+// ДОЛЖЕН ВЫЗЫВАТСЯ ПОД МЬЮТЕКСОМ УЖЕ
+void runTokenGC() {
+  auto now = std::chrono::steady_clock::now();
+  int deleted_count = 0;
+
+  for (auto it = tokenIndex.begin(); it != tokenIndex.end();) {
+    if (now > it->second.expiry) {
+      uuidIndex.erase(it->second.userUUID);
+      it = tokenIndex.erase(it);
+      deleted_count++;
+    } else {
+      ++it;
+    }
+  }
+
+  LOG_INFO << "Выполнен GC токенов игры, было удалено " << deleted_count << " токенов";
+}
+
+} // namespace
 
 uint64_t generateToken() {
   uint64_t token = 0; // Создаём переменную с токеном
@@ -81,23 +102,6 @@ std::optional<Token> popToken(const uint64_t &token) {
   tokenIndex.erase(it);
   uuidIndex.erase(result.userUUID);
 
+  lock.unlock();
   return result;
-}
-
-// ДОЛЖЕН ВЫЗЫВАТСЯ ПОД МЬЮТЕКСОМ УЖЕ
-void runTokenGC() {
-  auto now = std::chrono::steady_clock::now();
-  int deleted_count = 0;
-
-  for (auto it = tokenIndex.begin(); it != tokenIndex.end();) {
-    if (now > it->second.expiry) {
-      uuidIndex.erase(it->second.userUUID);
-      it = tokenIndex.erase(it);
-      deleted_count++;
-    } else {
-      ++it;
-    }
-  }
-
-  LOG_INFO << "Выполнен GC токенов игры, было удалено " << deleted_count << " токенов";
 }

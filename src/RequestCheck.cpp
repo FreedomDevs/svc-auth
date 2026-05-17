@@ -1,6 +1,7 @@
 #include "RequestCheck.hpp"
 #include "ResponseHandler.hpp"
 #include "codes.hpp"
+#include "services/hashUtil.hpp"
 
 namespace RequestCheck {
 
@@ -40,10 +41,11 @@ drogon::Task<Repository::RefreshToken> requireRefreshToken(const drogon::HttpReq
     throw ValidationError(ResponseHandler::error(request, "Refresh token has invalid length", Codes::Error::REFRESH_TOKEN_INVALID));
   }
 
-  std::array<uint8_t, 32> shaHash;
-  std::copy(decoded.begin(), decoded.end(), shaHash.begin());
+  std::vector<uint8_t> refreshData(32);
+  std::copy(decoded.begin(), decoded.end(), refreshData.begin());
+  auto refreshTokenHash = getRefreshTokenHash(refreshData);
 
-  std::optional<Repository::RefreshToken> refreshTokenData = co_await Repository::RefreshTokenRepo::getByHash(shaHash);
+  std::optional<Repository::RefreshToken> refreshTokenData = co_await Repository::RefreshTokenRepo::getByHash(refreshTokenHash);
   if (!refreshTokenData.has_value()) {
     throw ValidationError(ResponseHandler::error(request, "Refresh token invalid", Codes::Error::REFRESH_TOKEN_INVALID));
   }

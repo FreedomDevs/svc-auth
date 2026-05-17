@@ -30,7 +30,7 @@ int main() {
   app().setLogLevel(trantor::Logger::kTrace);
 #endif
 
-  app().setBeforeListenSockOptCallback(preconfigurateSocket).addListener("::", 9007);
+  app().setBeforeListenSockOptCallback(preconfigurateSocket).addListener("::", 80);
   initDatabase();
 
   LOG_INFO << "Server running on: *:9007";

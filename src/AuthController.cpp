@@ -36,7 +36,6 @@ public:
 
   Task<HttpResponsePtr> registerEndpoint(HttpRequestPtr request) {
     try {
-      LOG_INFO << "4";
       const Json::Value *json = RequestCheck::requireJson(request);
 
       std::string login = RequestCheck::requireString(request, *json, "login");
@@ -173,9 +172,10 @@ public:
       auto userCheckResult = co_await usersClient.getUserById(login, true);
       if (std::holds_alternative<HttpError>(userCheckResult)) {
         auto err = std::get<HttpError>(userCheckResult);
-        if (err.httpStatus != 404) {
-          co_return ResponseHandler::error(request, "Error checking user existence: " + err.message, Codes::Error::AUTH_FAILED);
+        if (err.httpStatus == 404) {
+          co_return ResponseHandler::error(request, "User not found", Codes::Error::USER_NOT_FOUND);
         }
+        co_return ResponseHandler::error(request, "Error checking user existence: " + err.message, Codes::Error::AUTH_FAILED);
       }
       UserResponseDto user = std::get<UserResponseDto>(userCheckResult);
 
@@ -219,6 +219,8 @@ public:
       co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
     } catch (const RequestCheck::ValidationError &error) {
       co_return error.response;
+    } catch (const std::exception &ex) {
+      co_return ResponseHandler::error(request, "Unexpected error: " + std::string(ex.what()), Codes::Error::USER_CREATION_FAILED);
     }
   }
 
@@ -236,9 +238,10 @@ public:
       auto userCheckResult = co_await usersClient.getUserById(login, true);
       if (std::holds_alternative<HttpError>(userCheckResult)) {
         auto err = std::get<HttpError>(userCheckResult);
-        if (err.httpStatus != 404) {
-          co_return ResponseHandler::error(request, "Error checking user existence: " + err.message, Codes::Error::AUTH_FAILED);
+        if (err.httpStatus == 404) {
+          co_return ResponseHandler::error(request, "User not found", Codes::Error::USER_NOT_FOUND);
         }
+        co_return ResponseHandler::error(request, "Error checking user existence: " + err.message, Codes::Error::AUTH_FAILED);
       }
 
       UserResponseDto user = std::get<UserResponseDto>(userCheckResult);
@@ -285,7 +288,19 @@ public:
       UUID uuid = refreshToken.userId;
 
       if (method == "Game") {
-        uint64_t token = createTokenForUser(uuid);
+        UsersClient usersClient;
+
+        auto userCheckResult = co_await usersClient.getUserById(refreshToken.userId.toString());
+        if (std::holds_alternative<HttpError>(userCheckResult)) {
+          auto err = std::get<HttpError>(userCheckResult);
+          if (err.httpStatus == 404) {
+            co_return ResponseHandler::error(request, "User not found", Codes::Error::USER_NOT_FOUND);
+          }
+          co_return ResponseHandler::error(request, "Error checking user existence: " + err.message, Codes::Error::AUTH_FAILED);
+        }
+        UserResponseDto user = std::get<UserResponseDto>(userCheckResult);
+
+        uint64_t token = createTokenForUser(uuid, user.data.name);
         uint8_t *bytes = reinterpret_cast<uint8_t *>(&token);
 
         Json::Value res;
@@ -353,9 +368,10 @@ public:
       auto userCheckResult = co_await usersClient.getUserById(refreshToken.userId.toString());
       if (std::holds_alternative<HttpError>(userCheckResult)) {
         auto err = std::get<HttpError>(userCheckResult);
-        if (err.httpStatus != 404) {
-          co_return ResponseHandler::error(request, "Error checking user existence: " + err.message, Codes::Error::AUTH_FAILED);
+        if (err.httpStatus == 404) {
+          co_return ResponseHandler::error(request, "User not found", Codes::Error::USER_NOT_FOUND);
         }
+        co_return ResponseHandler::error(request, "Error checking user existence: " + err.message, Codes::Error::AUTH_FAILED);
       }
       UserResponseDto user = std::get<UserResponseDto>(userCheckResult);
 

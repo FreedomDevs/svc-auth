@@ -12,6 +12,5 @@ struct Token {
 };
 
 uint64_t generateToken();
-uint64_t createTokenForUser(const UUID &userUUID);
+uint64_t createTokenForUser(const UUID &userUUID, const std::string &username);
 std::optional<Token> popToken(const uint64_t &token);
-void runTokenGC();

@@ -40,9 +40,10 @@ inline void loadConfig() {
   MAX_GAME_TOKENS_BEFORE_GC = getEnvIntOrDefault("MAX_GAME_TOKENS_BEFORE_GC", 500);
 
   DB_CONNECTIONS_POOL_SIZE = getEnvIntOrDefault("DB_CONNECTIONS_POOL_SIZE", 3);
-  DB_CONNECT_STRING = getEnvOrDefault("DB_CONNECT_STRING", "dbname=svc-auth user=postgres password=postgres host=postgres port=5432");
+  DB_CONNECT_STRING = getEnvOrDefault("DB_CONNECT_STRING",
+                                      "dbname=svc-auth user=postgres password=postgres host=fd98:2dd6:8f48:1d99:22e6:f8c8::3 port=5432");
 
   // Это Docker gateway, потому что svc-users работает пока-что на хосте
-  USER_SERVICE_URL = getEnvOrDefault("USER_SERVICE_URL", "http://[fd98:2dd6:8f48:1d99:22e6:f8c8::1]:9002");
+  USER_SERVICE_URL = getEnvOrDefault("USER_SERVICE_URL", "http://[fd98:2dd6:8f48:1d99:dc28:e6e1::2]:80");
 }
 } // namespace config

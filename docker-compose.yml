@@ -1,20 +1,4 @@
 services:
-  postgres:
-    container_name: svc-auth-postgres
-    image: postgres:18-alpine
-
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: svc-auth
-
-    volumes:
-      - db:/var/lib/postgresql/data
-
-    networks:
-      net:
-        ipv6_address: fd98:2dd6:8f48:1d99:22e6:f8c8::3
-  
   app-dev:
     container_name: svc-auth-app-dev
     build:
@@ -39,21 +23,29 @@ services:
       - seccomp:unconfined
 
     networks:
-      net:
+      shared-net:
         ipv6_address: fd98:2dd6:8f48:1d99:22e6:f8c8::2
 
+  postgres:
+    container_name: svc-auth-postgres
+    image: postgres:18-alpine
+
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: svc-auth
+
+    volumes:
+      - db:/var/lib/postgresql
+
+    networks:
+      shared-net:
+        ipv6_address: fd98:2dd6:8f48:1d99:22e6:f8c8::3
+
 networks:
-  net:
-    enable_ipv6: true
-    enable_ipv4: false
-    driver_opts:
-      com.docker.network.driver.mtu: "65535"
-    ipam:
-      config:
-        - subnet: fd98:2dd6:8f48:1d99:22e6:f8c8::/96
-  host_bridge:
+  shared-net:
     external: true
-    name: bridge
+    name: svc-net
 
 volumes:
   db:
