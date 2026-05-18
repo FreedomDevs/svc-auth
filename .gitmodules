@@ -4,3 +4,6 @@
 [submodule "libs/jwt-cpp"]
 	path = libs/jwt-cpp
 	url = https://github.com/Thalhammer/jwt-cpp.git
+[submodule "libs/uap-cpp"]
+	path = libs/uap-cpp
+	url = https://github.com/ua-parser/uap-cpp.git

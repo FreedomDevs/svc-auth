@@ -33,6 +33,6 @@ int main() {
   app().setBeforeListenSockOptCallback(preconfigurateSocket).addListener("::", 80);
   initDatabase();
 
-  LOG_INFO << "Server running on: *:9007";
+  LOG_INFO << "Server running on: *:80";
   app().run();
 }

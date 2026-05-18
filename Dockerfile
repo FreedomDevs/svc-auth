@@ -2,7 +2,7 @@
 FROM alpine:3.23 AS builder
 
 # Ставим инструменты для сборки
-RUN apk add --no-cache clang cmake pkgconfig postgresql-dev samurai util-linux-dev jsoncpp-dev zlib-dev argon2-dev
+RUN apk add --no-cache clang cmake pkgconfig postgresql-dev samurai util-linux-dev jsoncpp-dev zlib-dev argon2-dev yaml-cpp-dev re2-dev
 
 WORKDIR /app
 COPY . .
@@ -27,8 +27,7 @@ COPY --from=builder \
   /usr/lib/libargon2.so.1 \
   /usr/lib/
 
-COPY --from=builder /app/build/svc-auth /svc-auth
+COPY --from=builder /app/build/svc-auth /app/build/regexes.yaml /
 
-EXPOSE 9007
 CMD ["/svc-auth"]
 

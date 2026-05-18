@@ -37,6 +37,9 @@ add_subdirectory(libs/drogon)
 set(JWT_BUILD_EXAMPLES OFF)
 add_subdirectory(libs/jwt-cpp)
 
+set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
+add_subdirectory(libs/uap-cpp)
+
 find_package(OpenSSL REQUIRED)
 
 # Компилируем все .cpp файлы в src
@@ -44,6 +47,12 @@ file(GLOB_RECURSE SOURCES "src/*.cpp")
 
 add_executable(svc-auth ${SOURCES})
 
+add_custom_command(TARGET svc-auth POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${CMAKE_CURRENT_SOURCE_DIR}/libs/uap-cpp/uap-core/regexes.yaml"
+    "${CMAKE_CURRENT_BINARY_DIR}/regexes.yaml"
+)
+
 target_include_directories(svc-auth PUBLIC ${PROJECT_SOURCE_DIR}/include ${OPENSSL_INCLUDE_DIR})
 target_compile_options(svc-auth PRIVATE -Wall -Wextra -Wpedantic -fno-modules)
-target_link_libraries(svc-auth PRIVATE drogon argon2 jwt-cpp ${OPENSSL_LIBRARIES})
+target_link_libraries(svc-auth PRIVATE drogon argon2 jwt-cpp uap-cpp ${OPENSSL_LIBRARIES})

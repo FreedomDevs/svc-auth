@@ -6,15 +6,18 @@ nativeBuildInputs = with pkgs; [
     gdb
     clang-tools
     clang
+    pkg-config
   ];
 
   buildInputs = with pkgs; [
     postgresql
+    yaml-cpp
     jsoncpp
     libuuid
     zlib
     openssl
     libargon2
+    re2
   ];
 
   CPATH = "${pkgs.glibc.dev}/include";

@@ -25,6 +25,7 @@ inline int DB_CONNECTIONS_POOL_SIZE;
 inline std::string DB_CONNECT_STRING;
 
 inline std::string USER_SERVICE_URL;
+inline std::string DOX_SERVICE_URL;
 
 inline void loadConfig() {
   ARGON2_T_COST = getEnvIntOrDefault("ARGON2_T_COST", 2);           // Количество итераций
@@ -43,7 +44,7 @@ inline void loadConfig() {
   DB_CONNECT_STRING = getEnvOrDefault("DB_CONNECT_STRING",
                                       "dbname=svc-auth user=postgres password=postgres host=fd98:2dd6:8f48:1d99:22e6:f8c8::3 port=5432");
 
-  // Это Docker gateway, потому что svc-users работает пока-что на хосте
   USER_SERVICE_URL = getEnvOrDefault("USER_SERVICE_URL", "http://[fd98:2dd6:8f48:1d99:dc28:e6e1::2]:80");
+  DOX_SERVICE_URL = getEnvOrDefault("DOX_SERVICE_URL", "http://[fd98:2dd6:8f48:1d99:3b03:a78e::2]:80");
 }
 } // namespace config
