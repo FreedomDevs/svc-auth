@@ -53,6 +53,6 @@ add_custom_command(TARGET svc-auth POST_BUILD
     "${CMAKE_CURRENT_BINARY_DIR}/regexes.yaml"
 )
 
-target_include_directories(svc-auth PUBLIC ${PROJECT_SOURCE_DIR}/include ${OPENSSL_INCLUDE_DIR})
+target_include_directories(svc-auth PUBLIC ${PROJECT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/libs/uap-cpp ${OPENSSL_INCLUDE_DIR})
 target_compile_options(svc-auth PRIVATE -Wall -Wextra -Wpedantic -fno-modules)
 target_link_libraries(svc-auth PRIVATE drogon argon2 jwt-cpp uap-cpp ${OPENSSL_LIBRARIES})
