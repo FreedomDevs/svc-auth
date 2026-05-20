@@ -40,6 +40,15 @@ add_subdirectory(libs/jwt-cpp)
 set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory(libs/uap-cpp)
 
+set(VIRTUAL_INCLUDE_DIR "${CMAKE_CURRENT_BINARY_DIR}/uap_virtual_includes/uap-cpp")
+file(MAKE_DIRECTORY "${VIRTUAL_INCLUDE_DIR}")
+
+file(CREATE_LINK 
+    "${CMAKE_CURRENT_SOURCE_DIR}/libs/uap-cpp/UaParser" 
+    "${VIRTUAL_INCLUDE_DIR}/UaParser" 
+    SYMBOLIC
+)
+
 find_package(OpenSSL REQUIRED)
 
 # Компилируем все .cpp файлы в src
@@ -53,6 +62,6 @@ add_custom_command(TARGET svc-auth POST_BUILD
     "${CMAKE_CURRENT_BINARY_DIR}/regexes.yaml"
 )
 
-target_include_directories(svc-auth PUBLIC ${PROJECT_SOURCE_DIR}/include ${CMAKE_CURRENT_SOURCE_DIR}/libs/uap-cpp ${OPENSSL_INCLUDE_DIR})
+target_include_directories(svc-auth PUBLIC ${PROJECT_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR}/uap_virtual_includes ${OPENSSL_INCLUDE_DIR})
 target_compile_options(svc-auth PRIVATE -Wall -Wextra -Wpedantic -fno-modules)
-target_link_libraries(svc-auth PRIVATE drogon argon2 jwt-cpp uap-cpp ${OPENSSL_LIBRARIES})
+target_link_libraries(svc-auth PRIVATE drogon argon2 jwt-cpp uap-cpp-static ${OPENSSL_LIBRARIES})
