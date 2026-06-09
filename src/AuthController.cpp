@@ -362,24 +362,8 @@ public:
     try {
       const Json::Value *json = RequestCheck::requireJson(request);
       Repository::RefreshToken refreshToken = co_await RequestCheck::requireRefreshToken(request, *json, "refresh_token");
-      UsersClient usersClient;
 
-      // Получаем информацию о игроке, включая его пароль
-      auto userCheckResult = co_await usersClient.getUserById(refreshToken.userId.toString());
-      if (std::holds_alternative<HttpError>(userCheckResult)) {
-        auto err = std::get<HttpError>(userCheckResult);
-        if (err.httpStatus == 404) {
-          co_return ResponseHandler::error(request, "User not found", Codes::Error::USER_NOT_FOUND);
-        }
-        co_return ResponseHandler::error(request, "Error checking user existence: " + err.message, Codes::Error::AUTH_FAILED);
-      }
-      UserResponseDto user = std::get<UserResponseDto>(userCheckResult);
-
-      Json::Value res;
-      res["uuid"] = refreshToken.userId.toString();
-      res["username"] = user.data.name;
-
-      co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
+      co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, Json::nullValue);
     } catch (const RequestCheck::ValidationError &error) {
       co_return error.response;
     } catch (const std::exception &ex) {
