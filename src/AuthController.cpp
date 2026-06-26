@@ -7,7 +7,6 @@
 #include "dto/userDto.hpp"
 #include "dto/userResponseDto.hpp"
 #include "http/usersClient.hpp"
-#include "services/RateLimiter.hpp"
 #include "services/hashUtil.hpp"
 #include "services/httpUtils.hpp"
 #include "services/jwtUtil.hpp"
@@ -181,11 +180,6 @@ public:
 
       if (!user.data.passwordHash) {
         throw std::logic_error("Password hash is null");
-      }
-
-      if (!limiter.allow("ip:" + clientIp, 10, std::chrono::seconds(60))) {
-        LOG_WARN << "[AUTH][BRUTE_BLOCK] login=" << login << " ip=" << clientIp;
-        co_return ResponseHandler::error(request, "Too many failed attempts from this IP", Codes::Error::TOO_MANY_ATTEMPTS);
       }
 
       if (!verifyPassword(*user.data.passwordHash, password)) {
@@ -370,8 +364,4 @@ public:
       co_return ResponseHandler::error(request, "Unexpected error: " + std::string(ex.what()), Codes::Error::USER_CREATION_FAILED);
     }
   }
-
-private:
-  static services::RateLimiter limiter;
 };
-services::RateLimiter AuthController::limiter;
