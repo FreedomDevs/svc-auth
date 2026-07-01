@@ -27,6 +27,11 @@ inline std::string DB_CONNECT_STRING;
 inline std::string USER_SERVICE_URL;
 inline std::string DOX_SERVICE_URL;
 
+inline std::string RABBIT_MQ_URL;
+inline std::string RABBIT_MQ_LOGIN;
+inline std::string RABBIT_MQ_PASSWORD;
+inline std::string RABBIT_MQ_QUEUE_NAME;
+
 inline void loadConfig() {
   ARGON2_T_COST = getEnvIntOrDefault("ARGON2_T_COST", 2);           // Количество итераций
   ARGON2_M_COST = getEnvIntOrDefault("ARGON2_M_COST", 1 << 16);     // 64 МБ памяти
@@ -46,5 +51,10 @@ inline void loadConfig() {
 
   USER_SERVICE_URL = getEnvOrDefault("USER_SERVICE_URL", "http://[fd98:2dd6:8f48:1d99:dc28:e6e1::2]:80");
   DOX_SERVICE_URL = getEnvOrDefault("DOX_SERVICE_URL", "http://[fd98:2dd6:8f48:1d99:3b03:a78e::2]:80");
+
+  RABBIT_MQ_URL = getEnvOrDefault("RABBIT_MQ_URL", "http://localhost:15672");
+  RABBIT_MQ_LOGIN = getEnvOrDefault("RABBIT_MQ_LOGIN", "guest");
+  RABBIT_MQ_PASSWORD = getEnvOrDefault("RABBIT_MQ_PASSWORD", "guest");
+  RABBIT_MQ_QUEUE_NAME = getEnvOrDefault("RABBIT_MQ_QUEUE_NAME", "email_queue");
 }
 } // namespace config
