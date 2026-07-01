@@ -78,7 +78,9 @@ drogon::Task<std::optional<Integration>> IntegrationRepo::getByUserId(const std:
     co_return std::nullopt;
 
   try {
-    auto r = co_await getDatabase()->execSqlCoro("SELECT userId, twofa, discordId, telegramId FROM integrations WHERE userId=$1", userId);
+    co_await create(userId);
+    auto r =
+        co_await getDatabase()->execSqlCoro("SELECT userId, twofa, discordId, telegramId, email FROM integrations WHERE userId=$1", userId);
 
     if (r.empty())
       co_return std::nullopt;
@@ -107,6 +109,7 @@ drogon::Task<bool> IntegrationRepo::set2FA(const std::string &userId, TwoFAType 
     co_return false;
 
   try {
+    co_await create(userId);
     auto r = (type == TwoFAType::None)
                  ? co_await getDatabase()->execSqlCoro("UPDATE integrations SET twofa=NULL WHERE userId=$1", userId)
                  : co_await getDatabase()->execSqlCoro("UPDATE integrations SET twofa=$1 WHERE userId=$2", toString(type), userId);
@@ -139,6 +142,7 @@ drogon::Task<bool> IntegrationRepo::setTelegramId(const std::string &userId, int
     co_return false;
 
   try {
+    co_await create(userId);
     auto r = co_await getDatabase()->execSqlCoro("UPDATE integrations SET telegramId=$1 WHERE userId=$2", telegramId, userId);
     if (r.affectedRows() <= 0) {
       std::cerr << "User with userId=" << userId << " not found." << std::endl;
@@ -164,6 +168,7 @@ drogon::Task<bool> IntegrationRepo::resetTelegramId(const std::string &userId) {
     co_return false;
 
   try {
+    co_await create(userId);
     auto r = co_await getDatabase()->execSqlCoro("UPDATE integrations SET telegramId=NULL WHERE userId=$1", userId);
     if (r.affectedRows() <= 0) {
       std::cerr << "User with userId=" << userId << " not found." << std::endl;
@@ -192,6 +197,7 @@ drogon::Task<bool> IntegrationRepo::setDiscordId(const std::string &userId, int6
     co_return false;
 
   try {
+    co_await create(userId);
     auto r = co_await getDatabase()->execSqlCoro("UPDATE integrations SET discordId=$1 WHERE userId=$2", discordId, userId);
 
     if (r.affectedRows() <= 0) {
@@ -219,6 +225,7 @@ drogon::Task<bool> IntegrationRepo::resetDiscordId(const std::string &userId) {
     co_return false;
 
   try {
+    co_await create(userId);
     auto r = co_await getDatabase()->execSqlCoro("UPDATE integrations SET discordId=NULL WHERE userId=$1", userId);
 
     if (r.affectedRows() <= 0) {
@@ -232,6 +239,37 @@ drogon::Task<bool> IntegrationRepo::resetDiscordId(const std::string &userId) {
     co_return false;
   } catch (...) {
     std::cerr << "Unknown error in resetDiscordId() for userId=" << userId << std::endl;
+    co_return false;
+  }
+}
+
+/* Email */
+
+/**
+ * Устанавливает Email пользователя.
+ * @param userId Идентификатор пользователя
+ * @param email EMAIL (std::string)
+ * @return true, если запись обновлена, false если пользователя нет или ошибка
+ */
+drogon::Task<bool> IntegrationRepo::setEmail(const std::string &userId, std::string email) {
+  if (userId.empty())
+    co_return false;
+
+  try {
+    co_await create(userId);
+    auto r = co_await getDatabase()->execSqlCoro("UPDATE integrations SET email=$1 WHERE userId=$2", email, userId);
+
+    if (r.affectedRows() <= 0) {
+      std::cerr << "User with userId=" << userId << " not found." << std::endl;
+      co_return false;
+    }
+    co_return true;
+
+  } catch (const std::exception &e) {
+    std::cerr << "Failed to set EMAIL for userId=" << userId << ": " << e.what() << std::endl;
+    co_return false;
+  } catch (...) {
+    std::cerr << "Unknown error in setEmail() for userId=" << userId << std::endl;
     co_return false;
   }
 }

@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS integrations (
   userId UUID PRIMARY KEY,
   twofa VARCHAR(10) DEFAULT NULL,
   discordId BIGINT DEFAULT NULL,
-  telegramId BIGINT DEFAULT NULL
+  telegramId BIGINT DEFAULT NULL,
+  email TEXT DEFAULT NULL
 );
 )";
 const std::string REFRESH_TOKENS_TABLE = R"(
@@ -20,6 +21,7 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
   expires_at TIMESTAMP NOT NULL
 );
 )";
+
 const std::string TOKEN_HASH_INDEX = "CREATE UNIQUE INDEX IF NOT EXISTS idx_refresh_tokens_tokenhash ON refresh_tokens(tokenHash);";
 const std::string TOKEN_EXPIRES_AT_INDEX = "CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);";
 

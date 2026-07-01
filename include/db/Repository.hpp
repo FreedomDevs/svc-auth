@@ -35,6 +35,7 @@ struct Integration {
   TwoFAType twofa = TwoFAType::None;
   std::optional<int64_t> discordId;
   std::optional<int64_t> telegramId;
+  std::optional<std::string> email;
 };
 
 class IntegrationRepo {
@@ -52,6 +53,8 @@ public:
   /* Discord */
   static drogon::Task<bool> setDiscordId(const std::string &userId, int64_t discordId);
   static drogon::Task<bool> resetDiscordId(const std::string &userId);
+
+  static drogon::Task<bool> setEmail(const std::string &userId, std::string email);
 
 private:
   static Integration mapRowToIntegration(const drogon::orm::Row &row);

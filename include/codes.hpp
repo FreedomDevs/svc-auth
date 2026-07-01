@@ -14,6 +14,7 @@ struct Codes {
     static inline constexpr Code LIVE_OK{200, "LIVE_OK", "svc-auth жив"};
 
     static inline constexpr Code REGISTRATION_SUCCESS{201, "REGISTRATION_SUCCESS", "User successfully registered"};
+    static inline constexpr Code RESEND_SUCCESS{201, "RESEND_SUCCESS", "Email resend successfully"};
   };
 
   struct Error {
@@ -34,5 +35,6 @@ struct Codes {
     static inline constexpr Code USER_CREATION_FAILED{500, "USER_CREATION_FAILED", "Failed to create user in svc-users"};
 
     static inline constexpr Code TOO_MANY_ATTEMPTS{429, "TOO_MANY_ATTEMPTS", "Too many failed attempts"};
+    static inline constexpr Code EMAIL_NOT_SET{401, "EMAIL_NOT_SET", "ИДИ НАХУЙ"};
   };
 };
