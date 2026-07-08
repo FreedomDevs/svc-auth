@@ -27,17 +27,16 @@ struct ConfirmationPandingEmailVereficationPending {
 
 struct RegistrationPasskey {
   std::vector<char> id;
-  std::vector<char> public_key;
+  std::vector<char> client_data;
+  std::vector<char> attestation;
   std::vector<std::string> transports;
-  std::uint32_t counter;
-  UUID aaguid;
 };
 
-struct LoginAssertion {
-  std::vector<char> credential_id;
-  std::vector<char> clientDataJSON;
-  std::vector<char> authenticatorData;
-  std::vector<char> signature;
+struct LoginRequest {
+  std::string id;
+  std::string client_data;
+  std::string auth_data;
+  std::string signature;
 };
 
 drogon::Task<uint64_t> sendVereficationMail(ConfirmationPandingEmailVereficationPending data);

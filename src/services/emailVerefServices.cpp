@@ -6,6 +6,11 @@
 #include "services/hashUtil.hpp"
 #include "services/minecraftTokenServices.hpp"
 #include <drogon/utils/Utilities.h>
+#include <fido.h>
+#include <fido/bio.h>
+#include <fido/credman.h>
+#include <fido/err.h>
+#include <fido/types.h>
 #include <random>
 #include <unordered_map>
 
@@ -19,12 +24,17 @@ int genCode() {
 
   return dist(gen);
 }
+
 } // namespace
 
 drogon::Task<uint64_t> sendVereficationMail(ConfirmationPandingEmailVereficationPending dota2) {
   int code = genCode();
   uint64_t token = generateToken();
   std::chrono::steady_clock::time_point expiry = std::chrono::steady_clock::now() + std::chrono::minutes(15);
+
+  if (dota2.passkey_challenge.has_value())
+    if (!drogon::utils::secureRandomBytes(dota2.passkey_challenge->data(), dota2.passkey_challenge->size()))
+      throw std::runtime_error("Ошибка генерации случайных байт");
 
   dota2.code = code;
   dota2.expiry = expiry;
@@ -69,6 +79,51 @@ drogon::Task<std::optional<ConfirmationPandingEmailVereficationPending>> verifyE
   switch (data[token].type) {
   case (ConfirmationPandingEmailVereficationPending::Type::Register): {
     auto dota1 = data[token];
+
+    if (dota1.passkey_challenge.has_value()) {
+      if (!passkey.has_value()) {
+        throw std::runtime_error("Passkey not provided");
+      }
+
+      fido_cred_t *cred = fido_cred_new();
+      if (!cred)
+        throw std::runtime_error("Passkey check failed");
+
+      int r =
+          fido_cred_set_attstmt(cred, reinterpret_cast<const unsigned char *>(passkey->attestation.data()), passkey->attestation.size());
+      if (r != FIDO_OK) {
+        fido_cred_free(&cred);
+        throw std::runtime_error(std::string("Ошибка парсинга attestation CBOR: ") + fido_strerr(r));
+      }
+
+      unsigned char client_data_hash[SHA256_DIGEST_LENGTH];
+      SHA256(reinterpret_cast<const unsigned char *>(passkey->client_data.data()), passkey->client_data.size(), client_data_hash);
+
+      fido_cred_set_clientdata_hash(cred, client_data_hash, sizeof(client_data_hash));
+
+      fido_cred_set_rp(cred, "example.com", nullptr);
+
+      r = fido_cred_verify(cred);
+      if (r != FIDO_OK) {
+        fido_cred_free(&cred);
+        throw std::runtime_error(std::string("Ошибка верификации passkey: ") + fido_strerr(r));
+      }
+
+      const unsigned char *cred_id_ptr = fido_cred_id_ptr(cred);
+      size_t cred_id_len = fido_cred_id_len(cred);
+
+      // Получаем публичный ключ (ВНИМАНИЕ: libfido2 возвращает его сразу в формате OpenSSL EVP_PKEY!)
+      // Тебе не нужно парсить COSE. Ты можешь сразу использовать его в OpenSSL.
+      const unsigned char *pubkey_ptr = fido_cred_pubkey_ptr(cred);
+      size_t pubkey_len = fido_cred_pubkey_len(cred);
+
+      std::cout << "Успешная верификация!" << std::endl;
+      std::cout << "Размер публичного ключа: " << pubkey_len << " байт." << std::endl;
+      // Тут чета надо с ключами делать
+
+      // Освобождаем память
+      fido_cred_free(&cred);
+    }
 
     // Создаём акк ебланчику чтобы не выткал
     auto createResult = co_await usersClient.createUser(dota1.login, dota1.password);

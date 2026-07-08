@@ -36,6 +36,8 @@ public:
   ADD_METHOD_TO(AuthController::checkRefreshTokenEndpoint, "/auth/check_refresh_token", Post, "TraceIdMiddleware", "LoggerMiddleware");
   ADD_METHOD_TO(AuthController::confirmEmailEndpoint, "/auth/confirm_email", Post, "TraceIdMiddleware", "LoggerMiddleware");
   ADD_METHOD_TO(AuthController::resentEmailEndpoint, "/auth/resend_email", Post, "TraceIdMiddleware", "LoggerMiddleware");
+  ADD_METHOD_TO(AuthController::createChildToken, "/auth/create_child_token", Post, "TraceIdMiddleware", "LoggerMiddleware");
+  ADD_METHOD_TO(AuthController::getClientInfo, "/auth/client_info/{client_id}", Get, "TraceIdMiddleware", "LoggerMiddleware");
   METHOD_LIST_END
 
   Task<HttpResponsePtr> registerEndpoint(HttpRequestPtr request) {
@@ -463,6 +465,53 @@ public:
       Repository::RefreshToken refreshToken = co_await RequestCheck::requireRefreshToken(request, *json, "refresh_token");
 
       co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, Json::nullValue);
+    } catch (const RequestCheck::ValidationError &error) {
+      co_return error.response;
+    } catch (const std::exception &ex) {
+      co_return ResponseHandler::error(request, "Unexpected error: " + std::string(ex.what()), Codes::Error::USER_CREATION_FAILED);
+    }
+  }
+
+  Task<HttpResponsePtr> createChildToken(HttpRequestPtr request) {
+    try {
+      const Json::Value *json = RequestCheck::requireJson(request);
+      Repository::RefreshToken refreshToken = co_await RequestCheck::requireRefreshToken(request, *json, "refresh_token");
+
+      std::vector<uint8_t> refreshData(32);
+      utils::secureRandomBytes(refreshData.data(), refreshData.size());
+      auto refreshTokenHash = getRefreshTokenHash(refreshData);
+
+      bool result = co_await Repository::RefreshTokenRepo::save(refreshToken.userId, refreshTokenHash, 30 * 24 * 60 * 60);
+      if (!result) {
+        throw std::runtime_error("Не удалось сохранить refresh token");
+      }
+
+      std::string refreshToken1 = utils::base64Encode(refreshData.data(), refreshData.size());
+
+      Json::Value res1;
+      res1["refresh_token"] = refreshToken1;
+
+      co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res1);
+    } catch (const RequestCheck::ValidationError &error) {
+      co_return error.response;
+    } catch (const std::exception &ex) {
+      co_return ResponseHandler::error(request, "Unexpected error: " + std::string(ex.what()), Codes::Error::USER_CREATION_FAILED);
+    }
+  }
+
+  Task<HttpResponsePtr> getClientInfo(HttpRequestPtr request, std::string client_id) {
+    try {
+      Json::Value res;
+
+      if (client_id == "shop") {
+        res["client_name"] = "Магазин";
+        res["description"] = "Хз";
+        res["redirect_url"] = "https://example.com/auth";
+      } else {
+        co_return ResponseHandler::error(request, Codes::Error::NOT_FOUND);
+      }
+
+      co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
     } catch (const RequestCheck::ValidationError &error) {
       co_return error.response;
     } catch (const std::exception &ex) {

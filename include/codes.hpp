@@ -20,6 +20,7 @@ struct Codes {
   struct Error {
     using Code = Codes::Code;
     static inline constexpr Code AUTH_FAILED{401, "AUTH_FAILED", "Auth failed"};
+    static inline constexpr Code NOT_FOUND{404, "NOT_FOUND", "Not found"};
     static inline constexpr Code USER_NOT_FOUND{404, "USER_NOT_FOUND", "user not found"};
     static inline constexpr Code INVALID_DATA{422, "INVALID_DATA", "invalid data"};
     static inline constexpr Code METHOD_INCORRECT{422, "METHOD_INCORRECT", "method incorrect"};
