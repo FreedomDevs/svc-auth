@@ -18,8 +18,13 @@ nativeBuildInputs = with pkgs; [
     openssl
     libargon2
     re2
+    libfido2.dev
+    libfido2.out
+    python3
   ];
 
-  CPATH = "${pkgs.glibc.dev}/include";
-  LIBRARY_PATH = "${pkgs.glibc}/lib";
+  shellHook = ''
+    export CPATH="${pkgs.glibc.dev}/include:$CPATH"
+    export LIBRARY_PATH="${pkgs.glibc}/lib:$LIBRARY_PATH"
+  '';
 }

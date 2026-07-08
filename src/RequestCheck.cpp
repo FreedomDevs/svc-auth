@@ -1,6 +1,7 @@
 #include "RequestCheck.hpp"
 #include "ResponseHandler.hpp"
 #include "codes.hpp"
+#include "drogon/utils/Utilities.h"
 #include "services/hashUtil.hpp"
 
 namespace RequestCheck {
@@ -19,6 +20,42 @@ std::string requireString(const drogon::HttpRequestPtr &request, const Json::Val
     throw ValidationError(ResponseHandler::error(request, field + " not defined or it is not string", Codes::Error::INVALID_DATA));
 
   return v.asString();
+}
+
+std::vector<char> requireBase64String(const drogon::HttpRequestPtr &request, const Json::Value &json, const std::string &field) {
+  const auto &v = json.get(field, Json::nullValue);
+  if (v.isNull() || !v.isString())
+    throw ValidationError(ResponseHandler::error(request, field + " not defined or it is not string", Codes::Error::INVALID_DATA));
+
+  std::string str = v.asString();
+
+  try {
+    return drogon::utils::base64DecodeToVector(str);
+  } catch (std::exception e) {
+    throw ValidationError(ResponseHandler::error(request, field + " not base64 string", Codes::Error::INVALID_DATA));
+  }
+}
+
+std::optional<std::string> requireStringOrNull(const drogon::HttpRequestPtr &request, const Json::Value &json, const std::string &field) {
+  const auto &v = json.get(field, Json::nullValue);
+  if (v.isNull())
+    return std::nullopt;
+
+  if (!v.isString())
+    throw ValidationError(ResponseHandler::error(request, field + " is not string", Codes::Error::INVALID_DATA));
+
+  return v.asString();
+}
+
+bool requireBool(const drogon::HttpRequestPtr &request, const Json::Value &json, const std::string &field, bool default_value) {
+  const auto &v = json.get(field, Json::nullValue);
+  if (v.isNull())
+    return default_value;
+
+  if (!v.isBool())
+    throw ValidationError(ResponseHandler::error(request, field + " is not bool", Codes::Error::INVALID_DATA));
+
+  return v.asBool();
 }
 
 #include "ResponseHandler.hpp"

@@ -274,6 +274,30 @@ drogon::Task<bool> IntegrationRepo::setEmail(const std::string &userId, std::str
   }
 }
 
+/* Email */
+
+drogon::Task<bool> IntegrationRepo::isExistsEmail(std::string email) {
+  if (email.empty())
+    co_return false;
+
+  try {
+    auto r = co_await getDatabase()->execSqlCoro("SELECT 1 FROM integrations WHERE email=$1", email);
+
+    if (r.empty()) {
+      co_return false;
+    }
+
+    co_return true;
+
+  } catch (const std::exception &e) {
+    std::cerr << "Failed to check email " << email << ": " << e.what() << std::endl;
+    co_return false;
+  } catch (...) {
+    std::cerr << "Unknown error in isExistsEmail() for email=" << email << std::endl;
+    co_return false;
+  }
+}
+
 /* REFRESH TOKENS */
 
 /**

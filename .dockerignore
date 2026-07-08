@@ -9,3 +9,5 @@ run
 .clang-format
 .gitmodules
 cache/
+aaguid_map.hpp
+

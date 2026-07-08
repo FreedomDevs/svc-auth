@@ -55,6 +55,7 @@ public:
   static drogon::Task<bool> resetDiscordId(const std::string &userId);
 
   static drogon::Task<bool> setEmail(const std::string &userId, std::string email);
+  static drogon::Task<bool> isExistsEmail(std::string email);
 
 private:
   static Integration mapRowToIntegration(const drogon::orm::Row &row);

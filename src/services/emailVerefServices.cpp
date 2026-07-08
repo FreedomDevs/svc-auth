@@ -47,7 +47,8 @@ drogon::Task<uint64_t> sendVereficationMail(ConfirmationPandingEmailVerefication
   co_return token;
 };
 
-drogon::Task<std::optional<ConfirmationPandingEmailVereficationPending>> verifyEmail(uint64_t token, int code) {
+drogon::Task<std::optional<ConfirmationPandingEmailVereficationPending>> verifyEmail(uint64_t token, int code,
+                                                                                     std::optional<RegistrationPasskey> passkey) {
   if (!data.contains(token)) {
     co_return std::nullopt;
   };

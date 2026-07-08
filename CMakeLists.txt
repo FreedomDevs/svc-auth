@@ -51,6 +51,8 @@ file(CREATE_LINK
 
 find_package(OpenSSL REQUIRED)
 
+pkg_check_modules(FIDO2 REQUIRED IMPORTED_TARGET libfido2)
+
 # Компилируем все .cpp файлы в src
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
@@ -64,4 +66,4 @@ add_custom_command(TARGET svc-auth POST_BUILD
 
 target_include_directories(svc-auth PUBLIC ${PROJECT_SOURCE_DIR}/include ${CMAKE_CURRENT_BINARY_DIR}/uap_virtual_includes ${OPENSSL_INCLUDE_DIR})
 target_compile_options(svc-auth PRIVATE -Wall -Wextra -Wpedantic -fno-modules)
-target_link_libraries(svc-auth PRIVATE drogon argon2 jwt-cpp uap-cpp-static ${OPENSSL_LIBRARIES})
+target_link_libraries(svc-auth PRIVATE drogon argon2 jwt-cpp uap-cpp-static PkgConfig::FIDO2 ${OPENSSL_LIBRARIES})

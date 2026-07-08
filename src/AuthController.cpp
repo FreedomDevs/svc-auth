@@ -21,6 +21,7 @@
 #include <json/config.h>
 #include <json/value.h>
 #include <stdexcept>
+#include <string>
 using namespace drogon;
 
 class AuthController : public HttpController<AuthController> {
@@ -42,8 +43,10 @@ public:
       const Json::Value *json = RequestCheck::requireJson(request);
 
       std::string login = RequestCheck::requireString(request, *json, "login");
-      std::string password = RequestCheck::requireString(request, *json, "password");
       std::string email = RequestCheck::requireString(request, *json, "email");
+      std::optional<std::string> password = RequestCheck::requireStringOrNull(request, *json, "password");
+
+      bool request_passkey = RequestCheck::requireBool(request, *json, "request_passkey");
 
       UsersClient usersClient;
 
@@ -62,8 +65,11 @@ public:
 
       cpevp.email = email;
       cpevp.login = login;
-      cpevp.password = password;
       cpevp.type = ConfirmationPandingEmailVereficationPending::Type::Register;
+      if (password.has_value())
+        cpevp.password = password.value();
+      if (request_passkey)
+        cpevp.passkey_challenge = std::array<char, 32>{};
 
       uint64_t svmRes = co_await sendVereficationMail(cpevp);
       uint8_t *bytes = reinterpret_cast<uint8_t *>(&svmRes);
@@ -276,6 +282,30 @@ public:
       std::string emailVereficationToken = RequestCheck::requireString(request, *json, "email_verefication_token");
       std::string code = RequestCheck::requireString(request, *json, "code");
 
+      std::optional<RegistrationPasskey> passkey = std::nullopt;
+
+      const Json::Value passkey_json = json->get("passkey", Json::nullValue);
+      if (passkey_json != Json::nullValue) {
+        passkey = RegistrationPasskey{};
+
+        passkey->id = RequestCheck::requireBase64String(request, passkey_json, "id");
+        passkey->public_key = RequestCheck::requireBase64String(request, passkey_json, "public_key");
+
+        if ((passkey_json).isMember("transports") && (passkey_json)["transports"].isArray()) {
+          const Json::Value &transportsArray = (passkey_json)["transports"];
+
+          passkey->transports.reserve(transportsArray.size());
+          for (const auto &value : transportsArray) {
+            if (value.isString()) {
+              passkey->transports.push_back(value.asString());
+            }
+          }
+        }
+
+        passkey->aaguid = UUID::fromString(RequestCheck::requireString(request, passkey_json, "aaguid"));
+        passkey->counter = std::stoi(RequestCheck::requireString(request, passkey_json, "counter"));
+      }
+
       auto data = utils::base64DecodeToVector(emailVereficationToken);
       if (data.size() != sizeof(uint64_t))
         co_return ResponseHandler::error(request, "Token invalid format", Codes::Error::INVALID_DATA);
@@ -283,14 +313,13 @@ public:
       uint64_t token = 0;
       std::memcpy(&token, data.data(), sizeof(uint64_t));
 
-      auto res = co_await verifyEmail(token, std::stoi(code));
+      auto res = co_await verifyEmail(token, std::stoi(code), passkey);
       if (!res) {
         co_return ResponseHandler::error(request, Codes::Error::AUTH_FAILED);
       }
 
       if (res->type == ConfirmationPandingEmailVereficationPending::Type::Login ||
           res->type == ConfirmationPandingEmailVereficationPending::Type::Register) {
-
         std::vector<uint8_t> refreshData(32);
         utils::secureRandomBytes(refreshData.data(), refreshData.size());
         auto refreshTokenHash = getRefreshTokenHash(refreshData);
