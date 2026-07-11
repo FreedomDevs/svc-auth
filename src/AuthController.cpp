@@ -64,22 +64,17 @@ public:
         }
       }
 
-      LOG_INFO << "1";
       ConfirmationPandingEmailVereficationPending cpevp;
 
       cpevp.email = email;
       cpevp.login = login;
-      LOG_INFO << "2";
       cpevp.type = ConfirmationPandingEmailVereficationPending::Type::Register;
       if (password.has_value())
         cpevp.password = password.value();
-      LOG_INFO << "3";
       if (request_passkey)
         cpevp.passkey_challenge = std::array<char, 32>{};
 
-      LOG_INFO << "4";
       uint64_t svmRes = co_await sendVereficationMail(cpevp);
-      LOG_INFO << "7";
       uint8_t *bytes = reinterpret_cast<uint8_t *>(&svmRes);
 
       Json::Value res;
@@ -211,16 +206,9 @@ public:
         throw std::runtime_error("Не удалось сохранить refresh token");
       }
 
-      // Делаем access_token
-      AccessTokenData tokenData;
-      tokenData.uuid = UUID::fromString(user.data.id);
-      tokenData.tokenHash = refreshTokenHash;
-
-      std::string accessToken = generateAccessToken(tokenData);
       std::string refreshToken = utils::base64Encode(refreshData.data(), refreshData.size());
 
       Json::Value res;
-      res["access_token"] = accessToken;
       res["refresh_token"] = refreshToken;
 
       LOG_INFO << "[AUTH][LOGIN_SUCCESS] login=" << login << " userId=" << user.data.id << " ip=" << clientIp;
@@ -338,15 +326,14 @@ public:
           throw std::runtime_error("Не удалось сохранить refresh token");
         }
 
-        AccessTokenData tokenData;
+        /*AccessTokenData tokenData;
         tokenData.uuid = res->userId;
         tokenData.tokenHash = refreshTokenHash;
 
-        std::string accessToken = generateAccessToken(tokenData);
+        std::string accessToken = generateAccessToken(tokenData);*/
         std::string refreshToken = utils::base64Encode(refreshData.data(), refreshData.size());
 
         Json::Value res1;
-        res1["access_token"] = accessToken;
         res1["refresh_token"] = refreshToken;
 
         LOG_INFO << "[AUTH][LOGIN_SUCCESS] login=" << res->login << " userId=" << res->userId.toString();

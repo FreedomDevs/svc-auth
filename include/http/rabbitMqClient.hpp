@@ -21,6 +21,7 @@ drogon::Task<void> sendEmailRequest(std::string email, std::string name, std::st
   payload["data"] = data;
 
   Json::StreamWriterBuilder writer;
+  writer["indentation"] = "";
   std::string message = Json::writeString(writer, payload);
 
   Json::Value body;
@@ -32,9 +33,18 @@ drogon::Task<void> sendEmailRequest(std::string email, std::string name, std::st
   auto req = drogon::HttpRequest::newHttpJsonRequest(body);
 
   req->setMethod(drogon::Post);
+  req->setPathEncode(false);
   req->setPath("/api/exchanges/%2F/amq.default/publish");
 
   req->addHeader("Authorization", "Basic " + drogon::utils::base64Encode(config::RABBIT_MQ_LOGIN + ":" + config::RABBIT_MQ_PASSWORD));
+
+  std::string url = config::RABBIT_MQ_URL;
+  if (url.rfind("http://", 0) == 0)
+    url.erase(0, 7);
+  else if (url.rfind("https://", 0) == 0)
+    url.erase(0, 8);
+
+  req->addHeader("Host", url);
 
   auto res = co_await client->sendRequestCoro(req);
   if (res->statusCode() == 200) {

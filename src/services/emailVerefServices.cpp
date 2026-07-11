@@ -32,7 +32,6 @@ drogon::Task<uint64_t> sendVereficationMail(ConfirmationPandingEmailVerefication
   uint64_t token = generateToken();
   std::chrono::steady_clock::time_point expiry = std::chrono::steady_clock::now() + std::chrono::minutes(15);
 
-  LOG_INFO << "5";
   if (dota2.passkey_challenge.has_value())
     if (!drogon::utils::secureRandomBytes(dota2.passkey_challenge->data(), dota2.passkey_challenge->size()))
       throw std::runtime_error("Ошибка генерации случайных байт");
@@ -41,15 +40,9 @@ drogon::Task<uint64_t> sendVereficationMail(ConfirmationPandingEmailVerefication
   myCopy.code = code;
   myCopy.expiry = expiry;
 
-  LOG_INFO << "6";
-
   data.emplace(token, myCopy);
 
-  LOG_INFO << "7";
-
   co_await sendEmailRequest(myCopy.email, myCopy.login, std::to_string(myCopy.code));
-
-  LOG_INFO << "8";
 
   if (ConfirmationPandingEmailVereficationPending::Type::Login != myCopy.type) {
     std::string hashedPassword;
