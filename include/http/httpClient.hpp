@@ -52,11 +52,9 @@ private:
           // Сериализуем Json::Value безопасно
           req->setBody(Json::writeString(builder, body));
         }
-        LOG_INFO << "4";
 
         drogon::HttpResponsePtr resp = co_await client_->sendRequestCoro(req, timeoutSec);
 
-        LOG_INFO << "5";
         if (resp->getStatusCode() >= 300) {
           co_return HttpError{HttpErrorType::HttpStatus, resp->getStatusCode(), std::string(resp->getBody())};
         }

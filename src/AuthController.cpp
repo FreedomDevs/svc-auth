@@ -14,6 +14,7 @@
 #include "services/jwtUtil.hpp"
 #include "services/minecraftTokenServices.hpp"
 #include "services/uuidUtils.hpp"
+#include "trantor/utils/Logger.h"
 #include <drogon/HttpController.h>
 #include <drogon/drogon.h>
 #include <drogon/utils/Utilities.h>
@@ -63,17 +64,22 @@ public:
         }
       }
 
+      LOG_INFO << "1";
       ConfirmationPandingEmailVereficationPending cpevp;
 
       cpevp.email = email;
       cpevp.login = login;
+      LOG_INFO << "2";
       cpevp.type = ConfirmationPandingEmailVereficationPending::Type::Register;
       if (password.has_value())
         cpevp.password = password.value();
+      LOG_INFO << "3";
       if (request_passkey)
         cpevp.passkey_challenge = std::array<char, 32>{};
 
+      LOG_INFO << "4";
       uint64_t svmRes = co_await sendVereficationMail(cpevp);
+      LOG_INFO << "7";
       uint8_t *bytes = reinterpret_cast<uint8_t *>(&svmRes);
 
       Json::Value res;

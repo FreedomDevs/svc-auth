@@ -31,6 +31,9 @@ RUN mkdir -p /app/dist/lib /app/dist/usr/lib && \
       /usr/lib/libabsl_int128.so.2508.0.0 \
       /usr/lib/libabsl_strings_internal.so.2508.0.0 \
       /usr/lib/libabsl_raw_logging_internal.so.2508.0.0 \
+      /usr/lib/libfido2.so.1 \
+      /usr/lib/libcbor.so.0.13 \
+      /usr/lib/libudev.so.1 \
       /app/dist/usr/lib && \
   cp /app/build/svc-auth /app/build/regexes.yaml /app/dist
 

@@ -32,26 +32,34 @@ drogon::Task<uint64_t> sendVereficationMail(ConfirmationPandingEmailVerefication
   uint64_t token = generateToken();
   std::chrono::steady_clock::time_point expiry = std::chrono::steady_clock::now() + std::chrono::minutes(15);
 
+  LOG_INFO << "5";
   if (dota2.passkey_challenge.has_value())
     if (!drogon::utils::secureRandomBytes(dota2.passkey_challenge->data(), dota2.passkey_challenge->size()))
       throw std::runtime_error("Ошибка генерации случайных байт");
 
-  dota2.code = code;
-  dota2.expiry = expiry;
+  ConfirmationPandingEmailVereficationPending myCopy = dota2;
+  myCopy.code = code;
+  myCopy.expiry = expiry;
 
-  data.emplace(token, dota2);
+  LOG_INFO << "6";
 
-  co_await sendEmailRequest(dota2.email, dota2.login, std::to_string(dota2.code));
+  data.emplace(token, myCopy);
 
-  if (ConfirmationPandingEmailVereficationPending::Type::Login != dota2.type) {
+  LOG_INFO << "7";
+
+  co_await sendEmailRequest(myCopy.email, myCopy.login, std::to_string(myCopy.code));
+
+  LOG_INFO << "8";
+
+  if (ConfirmationPandingEmailVereficationPending::Type::Login != myCopy.type) {
     std::string hashedPassword;
     try {
-      hashedPassword = hashPassword(dota2.password);
+      hashedPassword = hashPassword(myCopy.password);
     } catch (const std::exception &e) {
       throw std::runtime_error("Password hashing failed: " + std::string(e.what()));
     }
 
-    dota2.password = hashedPassword;
+    myCopy.password = hashedPassword;
   }
 
   co_return token;
