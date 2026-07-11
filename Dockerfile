@@ -2,10 +2,11 @@
 FROM alpine:3.24 AS builder
 
 # Ставим инструменты для сборки
-RUN apk add --no-cache clang cmake pkgconfig postgresql-dev samurai util-linux-dev jsoncpp-dev zlib-dev argon2-dev yaml-cpp-dev re2-dev build-base python3
+RUN apk add --no-cache clang cmake pkgconfig postgresql-dev samurai util-linux-dev jsoncpp-dev zlib-dev argon2-dev yaml-cpp-dev re2-dev build-base python3 libfido2-dev libfido2
 
 WORKDIR /app
-RUN mkdir include && python3 ./build_aaguid.py
+COPY build_aaguid.py build_aaguid.py
+RUN mkdir include && python3 build_aaguid.py
 
 COPY . .
 

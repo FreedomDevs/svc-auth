@@ -291,7 +291,7 @@ public:
         passkey = RegistrationPasskey{};
 
         passkey->id = RequestCheck::requireBase64String(request, passkey_json, "id");
-        passkey->public_key = RequestCheck::requireBase64String(request, passkey_json, "public_key");
+        // passkey->public_key = RequestCheck::requireBase64String(request, passkey_json, "public_key");
 
         if ((passkey_json).isMember("transports") && (passkey_json)["transports"].isArray()) {
           const Json::Value &transportsArray = (passkey_json)["transports"];
@@ -304,8 +304,8 @@ public:
           }
         }
 
-        passkey->aaguid = UUID::fromString(RequestCheck::requireString(request, passkey_json, "aaguid"));
-        passkey->counter = std::stoi(RequestCheck::requireString(request, passkey_json, "counter"));
+        // passkey->aaguid = UUID::fromString(RequestCheck::requireString(request, passkey_json, "aaguid"));
+        // passkey->counter = std::stoi(RequestCheck::requireString(request, passkey_json, "counter"));
       }
 
       auto data = utils::base64DecodeToVector(emailVereficationToken);
