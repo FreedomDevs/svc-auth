@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/bin/bash
+enable -f /usr/lib/bash/sleep sleep
 
 set -e
 
@@ -50,5 +51,4 @@ start
 while true; do
     sleep 0.5
 done
-
 

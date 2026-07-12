@@ -9,6 +9,9 @@ bool parseBoolSafe(const std::string &s);
 int getEnvIntOrDefault(const std::string &key, int defaultValue);
 std::string readFile(const std::string &filepath);
 
+inline std::string HOST;
+inline uint16_t PORT;
+
 inline uint32_t ARGON2_T_COST;
 inline uint32_t ARGON2_M_COST;
 inline uint32_t ARGON2_PARALLELISM;
@@ -33,6 +36,9 @@ inline std::string RABBIT_MQ_PASSWORD;
 inline std::string RABBIT_MQ_QUEUE_NAME;
 
 inline void loadConfig() {
+  HOST = getEnvOrDefault("HOST", "::");
+  PORT = getEnvIntOrDefault("PORT", 80);
+
   ARGON2_T_COST = getEnvIntOrDefault("ARGON2_T_COST", 2);           // Количество итераций
   ARGON2_M_COST = getEnvIntOrDefault("ARGON2_M_COST", 1 << 16);     // 64 МБ памяти
   ARGON2_PARALLELISM = getEnvIntOrDefault("ARGON2_PARALLELISM", 1); // Число потоков

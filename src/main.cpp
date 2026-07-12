@@ -1,38 +1,32 @@
 #include "config.hpp"
+#include <drogon/drogon.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <trantor/utils/Logger.h>
 
-#include <drogon/drogon.h>
-using namespace drogon;
-
 #include "db/DBManager.hpp"
 
-void preconfigurateSocket(int fd) {
-  // Включаем TCP_FASTOPEN
-  int enable = 1;
-  if (setsockopt(fd, IPPROTO_TCP, TCP_FASTOPEN, &enable, sizeof(enable)) == -1) {
-    LOG_INFO << "setsockopt TCP_FASTOPEN failed";
-  }
-}
+// Если прод то логи уровня info
+// Если dev то Trace логи
+#ifdef NDEBUG
+#define LOG_LEVEL trantor::Logger::kInfo
+#else
+#define LOG_LEVEL trantor::Logger::kTrace
+#endif
 
 int main() {
   config::loadConfig();
 
-  // Магия для docker
+  // Настраиваем буфер для stdout и stderr
   setvbuf(stdout, NULL, _IOLBF, BUFSIZ);
   setvbuf(stderr, NULL, _IOLBF, BUFSIZ);
 
   // Выставляем уровень подробности логов
-#ifdef NDEBUG
-  app().setLogLevel(trantor::Logger::kInfo);
-#else
-  app().setLogLevel(trantor::Logger::kTrace);
-#endif
+  drogon::app().setLogLevel(LOG_LEVEL);
 
-  app().setBeforeListenSockOptCallback(preconfigurateSocket).addListener("::", 80);
+  drogon::app().addListener(config::HOST, config::PORT);
   initDatabase();
 
-  LOG_INFO << "Server running on: *:80";
-  app().run();
+  LOG_INFO << "Starting server on: " << config::HOST << ":" << config::PORT;
+  drogon::app().run();
 }
