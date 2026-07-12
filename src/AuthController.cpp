@@ -38,7 +38,6 @@ public:
   ADD_METHOD_TO(AuthController::confirmEmailEndpoint, "/auth/confirm_email", Post, "TraceIdMiddleware", "LoggerMiddleware");
   ADD_METHOD_TO(AuthController::resentEmailEndpoint, "/auth/resend_email", Post, "TraceIdMiddleware", "LoggerMiddleware");
   ADD_METHOD_TO(AuthController::createChildToken, "/auth/create_child_token", Post, "TraceIdMiddleware", "LoggerMiddleware");
-  ADD_METHOD_TO(AuthController::getClientInfo, "/auth/client_info/{client_id}", Get, "TraceIdMiddleware", "LoggerMiddleware");
   METHOD_LIST_END
 
   Task<HttpResponsePtr> registerEndpoint(HttpRequestPtr request) {
@@ -485,26 +484,6 @@ public:
       res1["refresh_token"] = refreshToken1;
 
       co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res1);
-    } catch (const RequestCheck::ValidationError &error) {
-      co_return error.response;
-    } catch (const std::exception &ex) {
-      co_return ResponseHandler::error(request, "Unexpected error: " + std::string(ex.what()), Codes::Error::USER_CREATION_FAILED);
-    }
-  }
-
-  Task<HttpResponsePtr> getClientInfo(HttpRequestPtr request, std::string client_id) {
-    try {
-      Json::Value res;
-
-      if (client_id == "shop") {
-        res["client_name"] = "Магазин";
-        res["description"] = "Хз";
-        res["redirect_url"] = "https://example.com/auth";
-      } else {
-        co_return ResponseHandler::error(request, Codes::Error::NOT_FOUND);
-      }
-
-      co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
     } catch (const RequestCheck::ValidationError &error) {
       co_return error.response;
     } catch (const std::exception &ex) {

@@ -438,3 +438,66 @@ drogon::Task<bool> RefreshTokenRepo::deleteAllExpired() {
     co_return false;
   }
 }
+
+drogon::Task<bool> ClientInfoRepo::put(ClientInfo client_info) {
+  try {
+    auto r = co_await getDatabase()->execSqlCoro(
+        "INSERT INTO clients_info VALUES (id, name, description, redirect_url) VALUES ($1, $2, $3, $4) ON CONFLICT (id)"
+        "DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, redirect_url = EXCLUDED.redirect_url",
+        client_info.id, client_info.name, client_info.description, client_info.redirect_url);
+    co_return r.affectedRows() > 0;
+  } catch (const std::exception &e) {
+    std::cerr << "Failed to put client_info: " << e.what() << std::endl;
+    co_return false;
+  }
+}
+drogon::Task<std::tuple<bool, bool>> ClientInfoRepo::delet(std::string id) {
+  try {
+    auto r = co_await getDatabase()->execSqlCoro("DELETE FROM clients_info WHERE id = $1", id);
+    co_return std::make_tuple(true, r.affectedRows() > 0);
+  } catch (const std::exception &e) {
+    std::cerr << "Failed to delete client_info: " << e.what() << std::endl;
+    co_return std::make_tuple(false, false);
+  }
+}
+
+drogon::Task<std::tuple<bool, std::optional<ClientInfo>>> ClientInfoRepo::get(std::string id) {
+  try {
+    auto r = co_await getDatabase()->execSqlCoro("SELECT id,name,description,redirect_url FROM clients_info WHERE id = $1", id);
+    if (r.empty())
+      co_return std::make_tuple<bool, std::optional<ClientInfo>>(true, std::nullopt);
+
+    ClientInfo info;
+    info.id = r[0]["id"].as<std::string>();
+    info.name = r[0]["name"].as<std::string>();
+    info.description = r[0]["description"].as<std::string>();
+    info.redirect_url = r[0]["redirect_url"].as<std::string>();
+
+    co_return std::make_tuple(true, info);
+  } catch (const std::exception &e) {
+    std::cerr << "Failed to delete client_info: " << e.what() << std::endl;
+    co_return std::make_tuple<bool, std::optional<ClientInfo>>(false, std::nullopt);
+  }
+}
+
+drogon::Task<std::tuple<bool, std::vector<ClientInfo>>> ClientInfoRepo::list() {
+  try {
+    auto r = co_await getDatabase()->execSqlCoro("SELECT id,name,description,redirect_url FROM clients_info");
+    std::vector<ClientInfo> result;
+
+    for (auto i = r.cbegin(); i < r.cend(); i++) {
+      ClientInfo info;
+      info.id = i->at("id").as<std::string>();
+      info.name = i->at("name").as<std::string>();
+      info.description = i->at("description").as<std::string>();
+      info.redirect_url = i->at("redirect_url").as<std::string>();
+
+      result.push_back(info);
+    }
+
+    co_return std::make_tuple(true, result);
+  } catch (const std::exception &e) {
+    std::cerr << "Failed to delete client_info: " << e.what() << std::endl;
+    co_return std::make_tuple<bool, std::vector<ClientInfo>>(false, {});
+  }
+}

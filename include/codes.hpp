@@ -37,5 +37,7 @@ struct Codes {
 
     static inline constexpr Code TOO_MANY_ATTEMPTS{429, "TOO_MANY_ATTEMPTS", "Too many failed attempts"};
     static inline constexpr Code EMAIL_NOT_SET{401, "EMAIL_NOT_SET", "ИДИ НАХУЙ"};
+
+    static inline constexpr Code INTERNAL_ERROR{500, "INTERNAL_ERROR", "Internal server error"};
   };
 };

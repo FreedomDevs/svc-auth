@@ -78,4 +78,19 @@ public:
   static drogon::Task<bool> deleteAllExpired();
 };
 
+struct ClientInfo {
+  std::string id;
+  std::string name;
+  std::string description;
+  std::string redirect_url;
+};
+
+class ClientInfoRepo {
+public:
+  static drogon::Task<bool> put(ClientInfo client_info);
+  static drogon::Task<std::tuple<bool, bool>> delet(std::string id);
+  static drogon::Task<std::tuple<bool, std::optional<ClientInfo>>> get(std::string id);
+  static drogon::Task<std::tuple<bool, std::vector<ClientInfo>>> list();
+};
+
 } // namespace Repository

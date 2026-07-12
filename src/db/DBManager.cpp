@@ -21,6 +21,14 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
   expires_at TIMESTAMP NOT NULL
 );
 )";
+const std::string CLIENT_INFO_TABLE = R"(
+CREATE TABLE IF NOT EXISTS clients_info (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  redirect_url TEXT NOT NULL
+)
+)";
 
 const std::string TOKEN_HASH_INDEX = "CREATE UNIQUE INDEX IF NOT EXISTS idx_refresh_tokens_tokenhash ON refresh_tokens(tokenHash);";
 const std::string TOKEN_EXPIRES_AT_INDEX = "CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);";
@@ -31,6 +39,8 @@ void initDatabase() {
   client->execSqlSync(REFRESH_TOKENS_TABLE);
   client->execSqlSync(TOKEN_HASH_INDEX);
   client->execSqlSync(TOKEN_EXPIRES_AT_INDEX);
+
+  client->execSqlSync(CLIENT_INFO_TABLE);
 }
 void closeDatabase() { client = nullptr; }
 
