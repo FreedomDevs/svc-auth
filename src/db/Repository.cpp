@@ -441,16 +441,20 @@ drogon::Task<bool> RefreshTokenRepo::deleteAllExpired() {
 
 drogon::Task<bool> ClientInfoRepo::put(ClientInfo client_info) {
   try {
-    auto r = co_await getDatabase()->execSqlCoro(
-        "INSERT INTO clients_info VALUES (id, name, description, redirect_url) VALUES ($1, $2, $3, $4) ON CONFLICT (id)"
-        "DO UPDATE SET name = EXCLUDED.name, description = EXCLUDED.description, redirect_url = EXCLUDED.redirect_url",
-        client_info.id, client_info.name, client_info.description, client_info.redirect_url);
+    auto r = co_await getDatabase()->execSqlCoro("INSERT INTO clients_info (id, name, description, redirect_url) "
+                                                 "VALUES ($1, $2, $3, $4) "
+                                                 "ON CONFLICT (id) DO UPDATE SET "
+                                                 "name = EXCLUDED.name, "
+                                                 "description = EXCLUDED.description, "
+                                                 "redirect_url = EXCLUDED.redirect_url",
+                                                 client_info.id, client_info.name, client_info.description, client_info.redirect_url);
     co_return r.affectedRows() > 0;
   } catch (const std::exception &e) {
     std::cerr << "Failed to put client_info: " << e.what() << std::endl;
     co_return false;
   }
 }
+
 drogon::Task<std::tuple<bool, bool>> ClientInfoRepo::delet(std::string id) {
   try {
     auto r = co_await getDatabase()->execSqlCoro("DELETE FROM clients_info WHERE id = $1", id);
