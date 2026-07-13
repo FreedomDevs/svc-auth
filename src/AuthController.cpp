@@ -49,6 +49,8 @@ public:
       std::optional<std::string> password = RequestCheck::requireStringOrNull(request, *json, "password");
 
       bool request_passkey = RequestCheck::requireBool(request, *json, "request_passkey");
+      if (request_passkey)
+        co_return ResponseHandler::error(request, "Passkeys not supported", Codes::Error::INTERNAL_ERROR);
 
       UsersClient usersClient;
 
@@ -281,6 +283,7 @@ public:
 
       const Json::Value passkey_json = json->get("passkey", Json::nullValue);
       if (passkey_json != Json::nullValue) {
+        co_return ResponseHandler::error(request, "Passkeys not supported", Codes::Error::INTERNAL_ERROR);
         passkey = RegistrationPasskey{};
 
         passkey->id = RequestCheck::requireBase64String(request, passkey_json, "id");
