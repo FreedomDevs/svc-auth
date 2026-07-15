@@ -70,8 +70,18 @@ public:
       cpevp.email = email;
       cpevp.login = login;
       cpevp.type = ConfirmationPandingEmailVereficationPending::Type::Register;
-      if (password.has_value())
-        cpevp.password = password.value();
+      if (password.has_value()) {
+        // Хешируем сука пароль перед записью
+        std::string hash_password = hashPassword(*password);
+
+        // Прерываем регистрацию если код микинола бросил ошибку
+        if (hash_password.empty()) {
+          co_return ResponseHandler::error(request, "Failed to hash password", Codes::Error::INTERNAL_ERROR);
+        }
+
+        // Ура победа?
+        cpevp.password = hash_password;
+      }
       if (request_passkey)
         cpevp.passkey_challenge = std::array<char, 32>{};
 
