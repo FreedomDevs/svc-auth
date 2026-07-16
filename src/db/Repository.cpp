@@ -24,6 +24,8 @@ Integration IntegrationRepo::mapRowToIntegration(const drogon::orm::Row &row) {
     i.discordId = row["discordid"].as<int64_t>();
   if (!row["telegramid"].isNull())
     i.telegramId = row["telegramid"].as<int64_t>();
+  if (!row["email"].isNull())
+    i.email = row["email"].as<std::string>();
   return i;
 }
 

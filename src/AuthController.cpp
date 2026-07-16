@@ -188,6 +188,8 @@ public:
       }
 
       std::optional<Repository::Integration> userIntegrations = co_await Repository::IntegrationRepo::getByUserId(user.data.id);
+
+      // Блок отвечяет за поврторный логин если Email не указан (требует передачи email в data)
       if (!userIntegrations || !userIntegrations->email) {
         std::string email = RequestCheck::requireString(request, *json, "email");
 
