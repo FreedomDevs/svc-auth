@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
   tokenHash BYTEA PRIMARY KEY NOT NULL,
   userId UUID NOT NULL,
   description TEXT,
+  type INTEGER NOT NULL DEFAULT 0,
+  childOf BYTEA REFERENCES refresh_tokens(tokenHash) ON DELETE CASCADE,
   expires_at TIMESTAMP NOT NULL
 );
 )";

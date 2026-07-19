@@ -47,6 +47,17 @@ std::optional<std::string> requireStringOrNull(const drogon::HttpRequestPtr &req
   return v.asString();
 }
 
+std::optional<double> requireDoubleOrNull(const drogon::HttpRequestPtr &request, const Json::Value &json, const std::string &field) {
+  const auto &v = json.get(field, Json::nullValue);
+  if (v.isNull())
+    return std::nullopt;
+
+  if (!v.isDouble())
+    throw ValidationError(ResponseHandler::error(request, field + " is not number", Codes::Error::INVALID_DATA));
+
+  return v.asDouble();
+}
+
 bool requireBool(const drogon::HttpRequestPtr &request, const Json::Value &json, const std::string &field, bool default_value) {
   const auto &v = json.get(field, Json::nullValue);
   if (v.isNull())

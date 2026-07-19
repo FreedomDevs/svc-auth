@@ -17,6 +17,7 @@ std::string requireString(const drogon::HttpRequestPtr &request, const Json::Val
 std::vector<char> requireBase64String(const drogon::HttpRequestPtr &request, const Json::Value &json, const std::string &field);
 std::optional<std::string> requireStringOrNull(const drogon::HttpRequestPtr &request, const Json::Value &json, const std::string &field);
 bool requireBool(const drogon::HttpRequestPtr &request, const Json::Value &json, const std::string &field, bool default_value = false);
+std::optional<double> requireDoubleOrNull(const drogon::HttpRequestPtr &request, const Json::Value &json, const std::string &field);
 drogon::Task<Repository::RefreshToken> requireRefreshToken(const drogon::HttpRequestPtr &request, const Json::Value &json,
                                                            const std::string &field);
 void requireOneOf(const drogon::HttpRequestPtr &request, const std::string &field, const std::string &value,

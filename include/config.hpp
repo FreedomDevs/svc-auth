@@ -20,7 +20,7 @@ inline size_t ARGON2_SALT_LEN;
 
 inline std::string JWT_PRIV_KEY;
 inline std::string JWT_PUB_KEY;
-inline int JWT_TTL_SECONDS;
+inline double JWT_TTL_SECONDS;
 
 inline size_t MAX_GAME_TOKENS_BEFORE_GC;
 
@@ -47,7 +47,7 @@ inline void loadConfig() {
 
   JWT_PRIV_KEY = readFile("secrets/ed25519_private.pem");
   JWT_PUB_KEY = readFile("secrets/ed25519_public.pem");
-  JWT_TTL_SECONDS = getEnvIntOrDefault("JWT_TTL_SECONDS", 15 * 60);
+  JWT_TTL_SECONDS = (double)getEnvIntOrDefault("JWT_TTL_SECONDS", 15 * 60);
 
   MAX_GAME_TOKENS_BEFORE_GC = getEnvIntOrDefault("MAX_GAME_TOKENS_BEFORE_GC", 500);
 

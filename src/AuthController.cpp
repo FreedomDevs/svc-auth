@@ -144,7 +144,7 @@ public:
         throw std::runtime_error("Не удалось сохранить refresh token");
       }
 
-      std::string refreshToken = utils::base64Encode(refreshData.data(), refreshData.size());
+      std::string refreshToken = utils::base64Encode(refreshData.data(), refreshData.size(), true);
 
       Json::Value res;
       res["refresh_token"] = refreshToken;
@@ -219,7 +219,7 @@ public:
         throw std::runtime_error("Не удалось сохранить refresh token");
       }
 
-      std::string refreshToken = utils::base64Encode(refreshData.data(), refreshData.size());
+      std::string refreshToken = utils::base64Encode(refreshData.data(), refreshData.size(), true);
 
       Json::Value res;
       res["refresh_token"] = refreshToken;
@@ -275,7 +275,7 @@ public:
 
       LOG_INFO << "[AUTH][LOGIN_SUCCESS] login=" << login << " userId=" << user.data.id << " ip=" << clientIp;
 
-      std::string refreshToken = utils::base64Encode(refreshData.data(), refreshData.size());
+      std::string refreshToken = utils::base64Encode(refreshData.data(), refreshData.size(), true);
 
       Json::Value res;
       res["refresh_token"] = refreshToken;
@@ -345,7 +345,7 @@ public:
         tokenData.tokenHash = refreshTokenHash;
 
         std::string accessToken = generateAccessToken(tokenData);*/
-        std::string refreshToken = utils::base64Encode(refreshData.data(), refreshData.size());
+        std::string refreshToken = utils::base64Encode(refreshData.data(), refreshData.size(), true);
 
         Json::Value res1;
         res1["refresh_token"] = refreshToken;
@@ -387,48 +387,21 @@ public:
   Task<HttpResponsePtr> refreshEndpoint(HttpRequestPtr request) {
     try {
       const Json::Value *json = RequestCheck::requireJson(request);
-
-      std::string method = RequestCheck::requireString(request, *json, "method");
-      RequestCheck::requireOneOf(request, "method", method, {"Web", "Game"});
-
+      std::optional<double> TTL = RequestCheck::requireDoubleOrNull(request, *json, "ttl");
       Repository::RefreshToken refreshToken = co_await RequestCheck::requireRefreshToken(request, *json, "refresh_token");
 
       UUID uuid = refreshToken.userId;
 
-      if (method == "Game") {
-        UsersClient usersClient;
+      AccessTokenData tokenData;
+      tokenData.uuid = uuid;
+      tokenData.tokenHash = refreshToken.tokenHash;
 
-        auto userCheckResult = co_await usersClient.getUserById(refreshToken.userId.toString());
-        if (std::holds_alternative<HttpError>(userCheckResult)) {
-          auto err = std::get<HttpError>(userCheckResult);
-          if (err.httpStatus == 404) {
-            co_return ResponseHandler::error(request, "User not found", Codes::Error::USER_NOT_FOUND);
-          }
-          co_return ResponseHandler::error(request, "Error checking user existence: " + err.message, Codes::Error::AUTH_FAILED);
-        }
-        UserResponseDto user = std::get<UserResponseDto>(userCheckResult);
+      std::string accessToken = generateAccessToken(tokenData, TTL);
 
-        uint64_t token = createTokenForUser(uuid, user.data.name);
-        uint8_t *bytes = reinterpret_cast<uint8_t *>(&token);
+      Json::Value res;
+      res["token"] = accessToken;
 
-        Json::Value res;
-        res["token"] = utils::base64Encode(bytes, 8);
-
-        co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
-      } else if (method == "Web") {
-        AccessTokenData tokenData;
-        tokenData.uuid = uuid;
-        tokenData.tokenHash = refreshToken.tokenHash;
-
-        std::string accessToken = generateAccessToken(tokenData);
-
-        Json::Value res;
-        res["token"] = accessToken;
-
-        co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
-      } else {
-        throw std::runtime_error("Unexpected method " + method);
-      }
+      co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
     } catch (const RequestCheck::ValidationError &error) {
       co_return error.response;
     } catch (const std::exception &ex) {
@@ -493,7 +466,7 @@ public:
         throw std::runtime_error("Не удалось сохранить refresh token");
       }
 
-      std::string refreshToken1 = utils::base64Encode(refreshData.data(), refreshData.size());
+      std::string refreshToken1 = utils::base64Encode(refreshData.data(), refreshData.size(), true);
 
       Json::Value res1;
       res1["refresh_token"] = refreshToken1;

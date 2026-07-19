@@ -20,10 +20,11 @@ std::array<uint8_t, 32> base64ToHash(const std::string &b64) {
 
 } // namespace
 
-std::string generateAccessToken(const AccessTokenData &data) {
+std::string generateAccessToken(const AccessTokenData &data, std::optional<double> TTL) {
   auto now = std::chrono::system_clock::now();
   auto iat = now;
-  auto exp = now + std::chrono::seconds(config::JWT_TTL_SECONDS);
+  std::chrono::duration<double> fractional_seconds(std::min(config::JWT_TTL_SECONDS, TTL.value_or(config::JWT_TTL_SECONDS)));
+  auto exp = now + std::chrono::duration_cast<std::chrono::milliseconds>(fractional_seconds);
 
   auto token = jwt::create()
                    .set_type("JWT")

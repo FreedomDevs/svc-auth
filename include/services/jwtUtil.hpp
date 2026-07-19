@@ -18,7 +18,7 @@ struct AccessTokenData {
  * @param ttlSeconds время жизни токена в секундах
  * @return JWT строка
  */
-std::string generateAccessToken(const AccessTokenData &userId);
+std::string generateAccessToken(const AccessTokenData &userId, std::optional<double> TTL = std::nullopt);
 
 /**
  * @brief Проверка access токена
