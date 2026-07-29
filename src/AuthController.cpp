@@ -389,14 +389,32 @@ public:
       const Json::Value *json = RequestCheck::requireJson(request);
       std::optional<double> TTL = RequestCheck::requireDoubleOrNull(request, *json, "ttl");
       Repository::RefreshToken refreshToken = co_await RequestCheck::requireRefreshToken(request, *json, "refresh_token");
-
+      std::optional<std::string> serverName = RequestCheck::requireStringOrNull(request, *json, "serverName");
       UUID uuid = refreshToken.userId;
 
       AccessTokenData tokenData;
       tokenData.uuid = uuid;
       tokenData.tokenHash = refreshToken.tokenHash;
 
-      std::string accessToken = generateAccessToken(tokenData, TTL);
+      UsersClient usersClient;
+
+      std::optional<std::string> username = std::nullopt;
+
+      if (serverName.has_value() && !serverName->empty()) {
+        auto userCheckResult = co_await usersClient.getUserById(uuid.toString(), false);
+        if (std::holds_alternative<HttpError>(userCheckResult)) {
+          auto err = std::get<HttpError>(userCheckResult);
+          if (err.httpStatus == 404) {
+            co_return ResponseHandler::error(request, "User not found", Codes::Error::USER_NOT_FOUND);
+          }
+          co_return ResponseHandler::error(request, "Error checking user existence: " + err.message, Codes::Error::AUTH_FAILED);
+        }
+
+        auto user = std::get<UserResponseDto>(userCheckResult);
+        username = user.data.name;
+      }
+
+      std::string accessToken = generateAccessToken(tokenData, TTL, serverName, username);
 
       Json::Value res;
       res["token"] = accessToken;

@@ -20,19 +20,25 @@ std::array<uint8_t, 32> base64ToHash(const std::string &b64) {
 
 } // namespace
 
-std::string generateAccessToken(const AccessTokenData &data, std::optional<double> TTL) {
+std::string generateAccessToken(const AccessTokenData &data, std::optional<double> TTL, std::optional<std::string> serverName,
+                                std::optional<std::string> userName) {
   auto now = std::chrono::system_clock::now();
   auto iat = now;
   std::chrono::duration<double> fractional_seconds(std::min(config::JWT_TTL_SECONDS, TTL.value_or(config::JWT_TTL_SECONDS)));
   auto exp = now + std::chrono::duration_cast<std::chrono::milliseconds>(fractional_seconds);
 
-  auto token = jwt::create()
-                   .set_type("JWT")
-                   .set_issued_at(iat)
-                   .set_expires_at(exp)
-                   .set_payload_claim("uuid", jwt::claim(data.uuid.toString()))
-                   .set_payload_claim("tokenHash", jwt::claim(hashToBase64(data.tokenHash)))
-                   .sign(jwt::algorithm::ed25519{config::JWT_PUB_KEY, config::JWT_PRIV_KEY});
+  auto builder = jwt::create()
+                     .set_type("JWT")
+                     .set_issued_at(iat)
+                     .set_expires_at(exp)
+                     .set_payload_claim("uuid", jwt::claim(data.uuid.toString()))
+                     .set_payload_claim("tokenHash", jwt::claim(hashToBase64(data.tokenHash)));
+
+  if (serverName && userName && !serverName->empty() && !userName->empty()) {
+    builder.set_payload_claim("serverName", jwt::claim(*serverName)).set_payload_claim("userName", jwt::claim(*userName));
+  }
+
+  auto token = builder.sign(jwt::algorithm::ed25519{config::JWT_PUB_KEY, config::JWT_PRIV_KEY});
 
   return token;
 }
