@@ -29,9 +29,7 @@ class AuthController : public HttpController<AuthController> {
 public:
   METHOD_LIST_BEGIN
   ADD_METHOD_TO(AuthController::registerEndpoint, "/auth/register", Post, "TraceIdMiddleware", "LoggerMiddleware");
-  ADD_METHOD_TO(AuthController::altRegisterEndpoint, "/auth/alt/register", Post, "TraceIdMiddleware", "LoggerMiddleware");
   ADD_METHOD_TO(AuthController::loginEndpoint, "/auth/login", Post, "TraceIdMiddleware", "LoggerMiddleware");
-  ADD_METHOD_TO(AuthController::altLoginEndpoint, "/auth/alt/login", Post, "TraceIdMiddleware", "LoggerMiddleware");
   ADD_METHOD_TO(AuthController::refreshEndpoint, "/auth/refresh", Post, "TraceIdMiddleware", "LoggerMiddleware");
   ADD_METHOD_TO(AuthController::popGameTokenEndpoint, "/auth/pop_game_token", Post, "TraceIdMiddleware", "LoggerMiddleware");
   ADD_METHOD_TO(AuthController::checkRefreshTokenEndpoint, "/auth/check_refresh_token", Post, "TraceIdMiddleware", "LoggerMiddleware");
@@ -90,64 +88,6 @@ public:
 
       Json::Value res;
       res["email_verefication_token"] = utils::base64Encode(bytes, 8);
-
-      co_return ResponseHandler::success(request, Codes::Success::REGISTRATION_SUCCESS, res);
-    } catch (const RequestCheck::ValidationError &error) {
-      co_return error.response;
-    } catch (const std::exception &ex) {
-      co_return ResponseHandler::error(request, "Unexpected error: " + std::string(ex.what()), Codes::Error::USER_CREATION_FAILED);
-    }
-  }
-
-  Task<HttpResponsePtr> altRegisterEndpoint(HttpRequestPtr request) {
-    try {
-      const Json::Value *json = RequestCheck::requireJson(request);
-
-      std::string login = RequestCheck::requireString(request, *json, "login");
-      std::string password = RequestCheck::requireString(request, *json, "password");
-
-      UsersClient usersClient;
-
-      // Проверяем существования беззубого существа (базисный игрок элизиума)
-      auto userCheckResult = co_await usersClient.getUserById(login); // TODO: сделать нормальнй метод
-      if (!std::holds_alternative<HttpError>(userCheckResult)) {
-        co_return ResponseHandler::error(request, "Login already exists", Codes::Error::USER_ALREADY_EXISTS);
-      } else {
-        auto err = std::get<HttpError>(userCheckResult);
-        if (err.httpStatus != 404) {
-          co_return ResponseHandler::error(request, "Error checking user existence: " + err.message, Codes::Error::USER_CREATION_FAILED);
-        }
-      }
-
-      // Хешируем пароль
-      std::string hashedPassword;
-      try {
-        hashedPassword = hashPassword(password);
-      } catch (const std::exception &e) {
-        co_return ResponseHandler::error(request, "Password hashing failed: " + std::string(e.what()), Codes::Error::HASHING_FAILED);
-      }
-      // Создаём ебланчика
-      auto createResult = co_await usersClient.createUser(login, hashedPassword);
-      if (std::holds_alternative<HttpError>(createResult)) {
-        auto err = std::get<HttpError>(createResult);
-        co_return ResponseHandler::error(request, "User creation failed: " + err.message, Codes::Error::USER_CREATION_FAILED);
-      }
-
-      UserResponseDto createdUser = std::get<UserResponseDto>(createResult);
-
-      std::vector<uint8_t> refreshData(32);
-      utils::secureRandomBytes(refreshData.data(), refreshData.size());
-      auto refreshTokenHash = getRefreshTokenHash(refreshData);
-
-      bool result = co_await Repository::RefreshTokenRepo::save(UUID::fromString(createdUser.data.id), refreshTokenHash, 30 * 24 * 60 * 60);
-      if (!result) {
-        throw std::runtime_error("Не удалось сохранить refresh token");
-      }
-
-      std::string refreshToken = utils::base64Encode(refreshData.data(), refreshData.size(), true);
-
-      Json::Value res;
-      res["refresh_token"] = refreshToken;
 
       co_return ResponseHandler::success(request, Codes::Success::REGISTRATION_SUCCESS, res);
     } catch (const RequestCheck::ValidationError &error) {
@@ -230,58 +170,6 @@ public:
       co_return error.response;
     } catch (const std::exception &ex) {
       co_return ResponseHandler::error(request, "Unexpected error: " + std::string(ex.what()), Codes::Error::USER_CREATION_FAILED);
-    }
-  }
-
-  Task<HttpResponsePtr> altLoginEndpoint(HttpRequestPtr request) {
-    try {
-      const Json::Value *json = RequestCheck::requireJson(request);
-
-      std::string login = RequestCheck::requireString(request, *json, "login");
-      std::string password = RequestCheck::requireString(request, *json, "password");
-
-      UsersClient usersClient;
-      std::string clientIp = getClientIp(request);
-
-      // Получаем информацию о игроке, включая его пароль
-      auto userCheckResult = co_await usersClient.getUserById(login, true);
-      if (std::holds_alternative<HttpError>(userCheckResult)) {
-        auto err = std::get<HttpError>(userCheckResult);
-        if (err.httpStatus == 404) {
-          co_return ResponseHandler::error(request, "User not found", Codes::Error::USER_NOT_FOUND);
-        }
-        co_return ResponseHandler::error(request, "Error checking user existence: " + err.message, Codes::Error::AUTH_FAILED);
-      }
-
-      UserResponseDto user = std::get<UserResponseDto>(userCheckResult);
-
-      if (!user.data.passwordHash) {
-        throw std::logic_error("Password hash is null");
-      }
-
-      if (!verifyPassword(*user.data.passwordHash, password)) {
-        LOG_INFO << "[AUTH][LOGIN_FAILED] login=" << login << " ip=" << clientIp;
-        co_return ResponseHandler::error(request, "Password invalid", Codes::Error::PASSWORD_INVALID);
-      }
-
-      std::vector<uint8_t> refreshData(32);
-      utils::secureRandomBytes(refreshData.data(), refreshData.size());
-      auto refreshTokenHash = getRefreshTokenHash(refreshData);
-
-      bool result = co_await Repository::RefreshTokenRepo::save(UUID::fromString(user.data.id), refreshTokenHash, 30 * 24 * 60 * 60);
-      if (!result) {
-        throw std::runtime_error("Не удалось сохранить refresh token");
-      }
-
-      LOG_INFO << "[AUTH][LOGIN_SUCCESS] login=" << login << " userId=" << user.data.id << " ip=" << clientIp;
-
-      std::string refreshToken = utils::base64Encode(refreshData.data(), refreshData.size(), true);
-
-      Json::Value res;
-      res["refresh_token"] = refreshToken;
-      co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
-    } catch (const RequestCheck::ValidationError &error) {
-      co_return error.response;
     }
   }
 
@@ -461,12 +349,34 @@ public:
     try {
       const Json::Value *json = RequestCheck::requireJson(request);
       Repository::RefreshToken refreshToken = co_await RequestCheck::requireRefreshToken(request, *json, "refresh_token");
+      bool requestUsername = RequestCheck::requireBool(request, *json, "request_username", false);
+
+      std::optional<std::string> username = std::nullopt;
+      UsersClient usersClient;
+      if (requestUsername) {
+        auto userCheckResult = co_await usersClient.getUserById(refreshToken.userId.toString(), false);
+        if (std::holds_alternative<HttpError>(userCheckResult)) {
+          auto err = std::get<HttpError>(userCheckResult);
+          if (err.httpStatus == 404) {
+            co_return ResponseHandler::error(request, "User not found", Codes::Error::USER_NOT_FOUND);
+          }
+          co_return ResponseHandler::error(request, "Error checking user existence: " + err.message, Codes::Error::AUTH_FAILED);
+        }
+
+        auto user = std::get<UserResponseDto>(userCheckResult);
+        username = user.data.name;
+      }
+
+      Json::Value res;
+      res["uuid"] = refreshToken.userId.toString();
+      if (username.has_value())
+        res["username"] = username.value();
 
       co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, Json::nullValue);
     } catch (const RequestCheck::ValidationError &error) {
       co_return error.response;
     } catch (const std::exception &ex) {
-      co_return ResponseHandler::error(request, "Unexpected error: " + std::string(ex.what()), Codes::Error::USER_CREATION_FAILED);
+      co_return ResponseHandler::error(request, "Unexpected error: " + std::string(ex.what()), Codes::Error::AUTH_FAILED);
     }
   }
 
