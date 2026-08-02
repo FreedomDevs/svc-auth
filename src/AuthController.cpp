@@ -372,7 +372,7 @@ public:
       if (username.has_value())
         res["username"] = username.value();
 
-      co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, Json::nullValue);
+      co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
     } catch (const RequestCheck::ValidationError &error) {
       co_return error.response;
     } catch (const std::exception &ex) {

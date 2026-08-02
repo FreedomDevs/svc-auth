@@ -134,7 +134,7 @@ drogon::Task<std::optional<ConfirmationPandingEmailVereficationPending>> verifyE
     }
 
     UserResponseDto createdUser = std::get<UserResponseDto>(createResult);
-
+    std::cout << createdUser.data.id;
     dota1.userId = UUID::fromString(createdUser.data.id);
 
     // Записываем ебланчику email чтобы не выткал х2
@@ -143,7 +143,7 @@ drogon::Task<std::optional<ConfirmationPandingEmailVereficationPending>> verifyE
       throw std::runtime_error("failed to set email userID: " + dota1.userId.toString());
     }
 
-    break;
+    co_return dota1;
   }
   case (ConfirmationPandingEmailVereficationPending::Type::Login): {
     auto satan = data[token];
@@ -152,9 +152,10 @@ drogon::Task<std::optional<ConfirmationPandingEmailVereficationPending>> verifyE
     if (!emailSet) {
       throw std::runtime_error("failed to set email userID: " + satan.userId.toString());
     }
-    break;
+    co_return data[token];
   }
   }
+
   co_return data[token];
 };
 
