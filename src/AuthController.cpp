@@ -50,6 +50,10 @@ public:
       if (request_passkey)
         co_return ResponseHandler::error(request, "Passkeys not supported", Codes::Error::INTERNAL_ERROR);
 
+      if (co_await Repository::IntegrationRepo::isExistsEmail(email)) {
+        co_return ResponseHandler::error(request, "Email already exists", Codes::Error::EMAIL_ALREADY_REGISTERED);
+      }
+
       UsersClient usersClient;
 
       // Проверяем существования беззубого существа (базисный игрок элизиума)
@@ -132,6 +136,10 @@ public:
       // Блок отвечяет за поврторный логин если Email не указан (требует передачи email в data)
       if (!userIntegrations || !userIntegrations->email) {
         std::string email = RequestCheck::requireString(request, *json, "email");
+
+        if (co_await Repository::IntegrationRepo::isExistsEmail(email)) {
+          co_return ResponseHandler::error(request, "Email already exists", Codes::Error::EMAIL_ALREADY_REGISTERED);
+        }
 
         ConfirmationPandingEmailVereficationPending cpevp;
 

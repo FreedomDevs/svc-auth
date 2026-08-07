@@ -32,6 +32,7 @@ struct Codes {
     static inline constexpr Code REFRESH_TOKEN_INVALID{401, "REFRESH_TOKEN_INVALID", "Refresh token invalid"};
     static inline constexpr Code GAME_TOKEN_INVALID{401, "GAME_TOKEN_INVALID", "Game token invalid"};
     static inline constexpr Code USER_ALREADY_EXISTS{409, "USER_ALREADY_EXISTS", "User with this login already exists"};
+    static inline constexpr Code EMAIL_ALREADY_REGISTERED{409, "EMAIL_ALREADY_REGISTERED", "User with this mail already exists"};
     static inline constexpr Code HASHING_FAILED{500, "HASHING_FAILED", "Password hashing failed"};
     static inline constexpr Code USER_CREATION_FAILED{500, "USER_CREATION_FAILED", "Failed to create user in svc-users"};
 
