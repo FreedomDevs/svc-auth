@@ -397,7 +397,8 @@ public:
       utils::secureRandomBytes(refreshData.data(), refreshData.size());
       auto refreshTokenHash = getRefreshTokenHash(refreshData);
 
-      bool result = co_await Repository::RefreshTokenRepo::save(refreshToken.userId, refreshTokenHash, 30 * 24 * 60 * 60);
+      bool result =
+          co_await Repository::RefreshTokenRepo::save(refreshToken.userId, refreshTokenHash, 30 * 24 * 60 * 60, refreshToken.tokenHash);
       if (!result) {
         throw std::runtime_error("Не удалось сохранить refresh token");
       }

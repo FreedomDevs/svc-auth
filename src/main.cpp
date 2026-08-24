@@ -1,4 +1,5 @@
 #include "config.hpp"
+
 #include <drogon/drogon.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
@@ -15,8 +16,6 @@
 #endif
 
 int main() {
-  config::loadConfig();
-
   // Настраиваем буфер для stdout и stderr
   setvbuf(stdout, NULL, _IOLBF, BUFSIZ);
   setvbuf(stderr, NULL, _IOLBF, BUFSIZ);

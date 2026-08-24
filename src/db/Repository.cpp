@@ -309,17 +309,28 @@ drogon::Task<bool> IntegrationRepo::isExistsEmail(std::string email) {
  * @param ttlSeconds Время жизни токена в секундах
  * @return true, если токен успешно сохранён, false если ошибка или ttlSeconds <= 0
  */
-drogon::Task<bool> RefreshTokenRepo::save(const UUID &userId, const std::array<uint8_t, 32> &tokenHash, int ttlSeconds) {
+drogon::Task<bool> RefreshTokenRepo::save(const UUID &userId, const std::array<uint8_t, 32> &tokenHash, int ttlSeconds,
+                                          const std::optional<const std::array<uint8_t, 32>> &childOf) {
   if (tokenHash.empty() || ttlSeconds <= 0)
     co_return false;
 
   std::vector<char> tokenVec(tokenHash.begin(), tokenHash.end());
 
+  std::optional<std::vector<char>> childOfVec;
+  if (childOf.has_value()) {
+    childOfVec.emplace(childOf->begin(), childOf->end());
+  }
+
   try {
-    co_await getDatabase()->execSqlCoro("INSERT INTO refresh_tokens(userId, tokenHash, expires_at) "
-                                        "VALUES ($1, $2, NOW() + make_interval(secs => $3::int))",
-                                        userId.toString(), tokenVec, ttlSeconds);
-    co_return true;
+    auto result = co_await getDatabase()->execSqlCoro("INSERT INTO refresh_tokens (userId, tokenHash, expires_at, childOf) "
+                                                      "SELECT $1, $2, NOW() + make_interval(secs => $3::int), $4::bytea "
+                                                      "WHERE $4::bytea IS NULL OR EXISTS ("
+                                                      "  SELECT 1 FROM refresh_tokens "
+                                                      "  WHERE tokenHash = $4::bytea AND childOf IS NULL"
+                                                      ")",
+                                                      userId.toString(), tokenVec, ttlSeconds, childOfVec);
+
+    co_return result.affectedRows() > 0;
   } catch (const std::exception &e) {
     std::cerr << "Failed to save refresh token: " << e.what() << std::endl;
     co_return false;

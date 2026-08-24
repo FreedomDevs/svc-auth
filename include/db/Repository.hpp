@@ -70,7 +70,8 @@ struct RefreshToken {
 
 class RefreshTokenRepo {
 public:
-  static drogon::Task<bool> save(const UUID &userId, const std::array<uint8_t, 32> &tokenHash, int ttlSeconds);
+  static drogon::Task<bool> save(const UUID &userId, const std::array<uint8_t, 32> &tokenHash, int ttlSeconds,
+                                 const std::optional<const std::array<uint8_t, 32>> &childOf = std::nullopt);
   static drogon::Task<std::optional<RefreshToken>> getByHash(const std::array<uint8_t, 32> &tokenHash);
   static drogon::Task<bool> deleteByUserId(const UUID &userId);
   static drogon::Task<bool> deleteByHash(const std::array<uint8_t, 32> &tokenHash);

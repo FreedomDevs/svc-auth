@@ -23,9 +23,11 @@ std::array<uint8_t, 32> base64ToHash(const std::string &b64) {
 std::string generateAccessToken(const AccessTokenData &data, std::optional<double> TTL, std::optional<std::string> serverName,
                                 std::optional<std::string> userName) {
   auto now = std::chrono::system_clock::now();
+  double ttl_sec = std::min(static_cast<double>(config::JWT_TTL_SECONDS), TTL.value_or(config::JWT_TTL_SECONDS));
+  auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::duration<double>(ttl_sec));
+
   auto iat = now;
-  std::chrono::duration<double> fractional_seconds(std::min(config::JWT_TTL_SECONDS, TTL.value_or(config::JWT_TTL_SECONDS)));
-  auto exp = now + std::chrono::duration_cast<std::chrono::milliseconds>(fractional_seconds);
+  auto exp = now + duration_ms;
 
   auto builder = jwt::create()
                      .set_type("JWT")

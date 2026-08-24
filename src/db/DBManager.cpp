@@ -28,7 +28,9 @@ CREATE TABLE IF NOT EXISTS clients_info (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   description TEXT NOT NULL,
-  redirect_url TEXT NOT NULL
+  redirect_url TEXT NOT NULL,
+  ttl INTEGER,
+  type INTEGER DEFAULT 0
 )
 )";
 
