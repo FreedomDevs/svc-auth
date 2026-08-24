@@ -36,7 +36,7 @@ public:
   ADD_METHOD_TO(AuthController::confirmEmailEndpoint, "/auth/confirm_email", Post, "TraceIdMiddleware", "LoggerMiddleware");
   ADD_METHOD_TO(AuthController::resentEmailEndpoint, "/auth/resend_email", Post, "TraceIdMiddleware", "LoggerMiddleware");
   ADD_METHOD_TO(AuthController::createChildToken, "/auth/create_child_token", Post, "TraceIdMiddleware", "LoggerMiddleware");
-  ADD_METHOD_TO(AuthController::getMyIntegrations, "/auth/get_my_integrations", Post, "TraceIdMiddleware", "LoggerMiddleware");
+  ADD_METHOD_TO(AuthController::getMyIntegrations, "/auth/get_my_integrations", Get, "TraceIdMiddleware", "LoggerMiddleware");
   METHOD_LIST_END
 
   Task<HttpResponsePtr> registerEndpoint(HttpRequestPtr request) {
@@ -419,11 +419,17 @@ public:
 
   Task<HttpResponsePtr> getMyIntegrations(HttpRequestPtr request) {
     try {
-      const Json::Value *json = RequestCheck::requireJson(request);
-      Repository::RefreshToken refreshToken = co_await RequestCheck::requireRefreshToken(request, *json, "refresh_token");
+      std::string type = request->getHeader("eauth-type");
+      if (type != "user") {
+        co_return ResponseHandler::error(request, "Eauth type not 'user'", Codes::Error::AUTH_FAILED);
+      }
 
-      std::optional<Repository::Integration> integration =
-          co_await Repository::IntegrationRepo::getByUserId(refreshToken.userId.toString());
+      std::string id = request->getHeader("eauth-user-id");
+      if (id.empty()) {
+        co_return ResponseHandler::error(request, "userid not exists", Codes::Error::INTERNAL_ERROR);
+      }
+
+      std::optional<Repository::Integration> integration = co_await Repository::IntegrationRepo::getByUserId(id);
       if (!integration.has_value() || !integration->email.has_value()) {
         co_return ResponseHandler::error(request, "Unexpected error", Codes::Error::GET_INTEGRATIONS_FAILED);
       }
