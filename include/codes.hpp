@@ -36,6 +36,9 @@ struct Codes {
     static inline constexpr Code HASHING_FAILED{500, "HASHING_FAILED", "Password hashing failed"};
     static inline constexpr Code USER_CREATION_FAILED{500, "USER_CREATION_FAILED", "Failed to create user in svc-users"};
 
+    static inline constexpr Code GET_INTEGRATIONS_FAILED{500, "GET_INTEGRATIONS_FAILED",
+                                                         "Неизвестная ошибка при получении интеграций пользователя"};
+
     static inline constexpr Code TOO_MANY_ATTEMPTS{429, "TOO_MANY_ATTEMPTS", "Too many failed attempts"};
     static inline constexpr Code EMAIL_NOT_SET{401, "EMAIL_NOT_SET", "ИДИ НАХУЙ"};
 
