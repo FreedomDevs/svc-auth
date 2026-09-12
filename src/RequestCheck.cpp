@@ -69,6 +69,15 @@ bool requireBool(const drogon::HttpRequestPtr &request, const Json::Value &json,
   return v.asBool();
 }
 
+int64_t requireInt64(const drogon::HttpRequestPtr &request, const Json::Value &json, const std::string &field) {
+  const auto &v = json.get(field, Json::nullValue);
+
+  if (v.isNull() || !v.isInt64())
+    throw ValidationError(ResponseHandler::error(request, field + " not defined or it is not int64", Codes::Error::INVALID_DATA));
+
+  return v.asInt64();
+}
+
 #include "ResponseHandler.hpp"
 #include "codes.hpp"
 void requireOneOf(const drogon::HttpRequestPtr &request, const std::string &field, const std::string &value,

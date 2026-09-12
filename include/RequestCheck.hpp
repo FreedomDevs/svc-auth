@@ -1,6 +1,7 @@
 #pragma once
 #include "db/Repository.hpp"
 #include "drogon/HttpResponse.h"
+#include <cstdint>
 #include <drogon/HttpController.h>
 
 namespace RequestCheck {
@@ -17,6 +18,7 @@ std::string requireString(const drogon::HttpRequestPtr &request, const Json::Val
 std::vector<char> requireBase64String(const drogon::HttpRequestPtr &request, const Json::Value &json, const std::string &field);
 std::optional<std::string> requireStringOrNull(const drogon::HttpRequestPtr &request, const Json::Value &json, const std::string &field);
 bool requireBool(const drogon::HttpRequestPtr &request, const Json::Value &json, const std::string &field, bool default_value = false);
+int64_t requireInt64(const drogon::HttpRequestPtr &request, const Json::Value &json, const std::string &field);
 std::optional<double> requireDoubleOrNull(const drogon::HttpRequestPtr &request, const Json::Value &json, const std::string &field);
 drogon::Task<Repository::RefreshToken> requireRefreshToken(const drogon::HttpRequestPtr &request, const Json::Value &json,
                                                            const std::string &field);
