@@ -4,6 +4,7 @@
 #include "services/uuidUtils.hpp"
 #include <drogon/orm/Result.h>
 #include <iostream>
+#include <optional>
 
 using namespace Repository;
 
@@ -94,6 +95,29 @@ drogon::Task<std::optional<Integration>> IntegrationRepo::getByUserId(const std:
     co_return std::nullopt;
   } catch (...) {
     std::cerr << "Unknown error in getByUserId() for userId=" << userId << std::endl;
+    co_return std::nullopt;
+  }
+}
+
+drogon::Task<std::optional<Integration>> IntegrationRepo::getUserIdByEmail(const std::string &email) {
+  if (email.empty())
+    co_return std::nullopt;
+
+  try {
+    auto r =
+        co_await getDatabase()->execSqlCoro("SELECT userId, twofa, discordId, telegramId, email FROM integrations WHERE email=$1", email);
+
+    if (r.empty()) {
+      co_return std::nullopt;
+    }
+
+    co_return mapRowToIntegration(r[0]);
+
+  } catch (const std::exception &e) {
+    std::cerr << "Failed to get Integration for userId=" << email << ": " << e.what() << std::endl;
+    co_return std::nullopt;
+  } catch (...) {
+    std::cerr << "Unknown error in getByUserId() for userId=" << email << std::endl;
     co_return std::nullopt;
   }
 }

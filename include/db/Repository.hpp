@@ -42,6 +42,7 @@ class IntegrationRepo {
 public:
   static drogon::Task<Integration> create(const std::string &userId);
   static drogon::Task<std::optional<Integration>> getByUserId(const std::string &userId);
+  static drogon::Task<std::optional<Integration>> getUserIdByEmail(const std::string &email);
 
   /* 2FA */
   static drogon::Task<bool> set2FA(const std::string &userId, TwoFAType type);

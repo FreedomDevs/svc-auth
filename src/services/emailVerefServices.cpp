@@ -14,6 +14,9 @@
 #include <random>
 #include <unordered_map>
 
+// Кусок кала превративщейся в бога >_< (Я отвесяю всем будующим разхрабам этой хуйни мы не разберёмся когда тут будет 1к сток с хуй пойми
+// какой ответственностью)
+
 namespace {
 std::unordered_map<uint64_t, ConfirmationPandingEmailVereficationPending> data;
 
@@ -41,6 +44,10 @@ drogon::Task<uint64_t> sendVereficationMail(ConfirmationPandingEmailVerefication
   myCopy.expiry = expiry;
 
   data.emplace(token, myCopy);
+
+  if (ConfirmationPandingEmailVereficationPending::Type::RefreshPassword) {
+    co_await sendRefreshpassRequest(myCopy.email, myCopy.login, std::to_string(myCopy.code));
+  }
 
   co_await sendEmailRequest(myCopy.email, myCopy.login, std::to_string(myCopy.code));
 
@@ -153,6 +160,18 @@ drogon::Task<std::optional<ConfirmationPandingEmailVereficationPending>> verifyE
       throw std::runtime_error("failed to set email userID: " + satan.userId.toString());
     }
     co_return data[token];
+  }
+  case (ConfirmationPandingEmailVereficationPending::Type::RefreshPassword): {
+    auto satan = data[token];
+
+    auto integr = co_await Repository::IntegrationRepo::getUserIdByEmail(satan.email);
+    if (integr == std::nullopt) {
+      throw std::runtime_error("Не удалось получить интеграции по Email");
+    }
+    auto userId = integr->userId;
+
+    auto updatetPass = co_await usersClient.updatePassword(userId, "хуй");
+    // TODO: Доделать
   }
   }
 

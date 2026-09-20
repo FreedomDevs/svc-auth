@@ -1,5 +1,6 @@
 #pragma once
 #include "config.hpp"
+#include "dto/RefreshPassResponseDto.hpp"
 #include "dto/userResponseDto.hpp"
 #include "http/httpResult.hpp"
 #include "httpClient.hpp"
@@ -22,6 +23,17 @@ public:
     LOG_INFO << "[UsersClient::createUser] Payload: " << jsonStr;
 
     return http_.post<Json::Value, UserResponseDto>("/users", body);
+  }
+
+  drogon::Task<HttpResult<RefreshPassResponseDto>> updatePassword(const std::string &userId, const std::string &hashedPassword) {
+    Json::Value body;
+    body["password"] = hashedPassword;
+    // Logs
+    Json::StreamWriterBuilder writer;
+    std::string jsonStr = Json::writeString(writer, body);
+    LOG_INFO << "[UsersClient::updatePassword] Payload: " << jsonStr;
+
+    return http_.put<Json::Value, RefreshPassResponseDto>("/users/" + userId + "/password", body);
   }
 
 private:
