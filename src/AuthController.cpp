@@ -326,7 +326,8 @@ public:
       }
 
       if (res->type == ConfirmationPandingEmailVereficationPending::Type::Login ||
-          res->type == ConfirmationPandingEmailVereficationPending::Type::Register) {
+          res->type == ConfirmationPandingEmailVereficationPending::Type::Register ||
+          res->type == ConfirmationPandingEmailVereficationPending::Type::RefreshPassword) {
         std::vector<uint8_t> refreshData(32);
         utils::secureRandomBytes(refreshData.data(), refreshData.size());
         auto refreshTokenHash = getRefreshTokenHash(refreshData);
