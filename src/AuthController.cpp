@@ -135,9 +135,11 @@ public:
       std::string login_or_email = RequestCheck::requireString(request, *json, "login_or_email");
 
       UUID userId;
-      if (login_or_email.contains('@'))
+      std::string email;
+      if (login_or_email.contains('@')) {
         userId = UUID::fromString((co_await Repository::IntegrationRepo::getUserIdByEmail(login_or_email))->userId);
-      else {
+        email = login_or_email;
+      } else {
         auto response = co_await client.getUserById(login_or_email);
         if (std::holds_alternative<HttpError>(response)) {
           co_return ResponseHandler::error(request, "Error while changing password", Codes::Error::AUTH_FAILED);
@@ -145,10 +147,12 @@ public:
 
         UserResponseDto user = std::get<UserResponseDto>(response);
         userId = UUID::fromString(user.data.id);
+        email = *(co_await Repository::IntegrationRepo::getByUserId(userId.toString()))->email;
       }
 
       ConfirmationPandingEmailVereficationPending cpevp;
       cpevp.userId = userId;
+      cpevp.email = email;
       cpevp.type = ConfirmationPandingEmailVereficationPending::Type::RefreshPassword;
 
       std::string hash_password = hashPassword(password);

@@ -45,11 +45,11 @@ drogon::Task<uint64_t> sendVereficationMail(ConfirmationPandingEmailVerefication
 
   data.emplace(token, myCopy);
 
-  if (ConfirmationPandingEmailVereficationPending::Type::RefreshPassword) {
+  if (myCopy.type == ConfirmationPandingEmailVereficationPending::Type::RefreshPassword) {
     co_await sendRefreshpassRequest(myCopy.email, myCopy.login, std::to_string(myCopy.code));
+  } else {
+    co_await sendEmailRequest(myCopy.email, myCopy.login, std::to_string(myCopy.code));
   }
-
-  co_await sendEmailRequest(myCopy.email, myCopy.login, std::to_string(myCopy.code));
 
   if (ConfirmationPandingEmailVereficationPending::Type::Login != myCopy.type) {
     std::string hashedPassword;
