@@ -163,15 +163,8 @@ drogon::Task<std::optional<ConfirmationPandingEmailVereficationPending>> verifyE
   }
   case (ConfirmationPandingEmailVereficationPending::Type::RefreshPassword): {
     auto satan = data[token];
-
-    auto integr = co_await Repository::IntegrationRepo::getUserIdByEmail(satan.email);
-    if (integr == std::nullopt) {
-      throw std::runtime_error("Не удалось получить интеграции по Email");
-    }
-    auto userId = integr->userId;
-
-    auto updatetPass = co_await usersClient.updatePassword(userId, "хуй");
-    // TODO: Доделать
+    auto updatetPass = co_await usersClient.updatePassword(satan.userId.toString(), satan.password);
+    co_return data[token];
   }
   }
 
@@ -191,5 +184,8 @@ drogon::Task<void> resendEmail(uint64_t token) {
   исус.code = code;
   исус.expiry = expiry;
 
-  co_await sendEmailRequest(исус.email, исус.login, std::to_string(исус.code));
+  if (исус.type == ConfirmationPandingEmailVereficationPending::Type::RefreshPassword)
+    co_await sendRefreshpassRequest(исус.email, исус.login, std::to_string(исус.code));
+  else
+    co_await sendEmailRequest(исус.email, исус.login, std::to_string(исус.code));
 }

@@ -37,6 +37,7 @@ public:
   ADD_METHOD_TO(AuthController::resentEmailEndpoint, "/auth/resend_email", Post, "TraceIdMiddleware", "LoggerMiddleware");
   ADD_METHOD_TO(AuthController::createChildToken, "/auth/create_child_token", Post, "TraceIdMiddleware", "LoggerMiddleware");
   ADD_METHOD_TO(AuthController::getMyIntegrations, "/auth/get_my_integrations", Get, "TraceIdMiddleware", "LoggerMiddleware");
+  ADD_METHOD_TO(AuthController::refreshPasswordEndpoint, "/auth/refresh_password", Post, "TraceIdMiddleware", "LoggerMiddleware");
   METHOD_LIST_END
 
   Task<HttpResponsePtr> registerEndpoint(HttpRequestPtr request) {
@@ -87,6 +88,74 @@ public:
       }
       if (request_passkey)
         cpevp.passkey_challenge = std::array<char, 32>{};
+
+      uint64_t svmRes = co_await sendVereficationMail(cpevp);
+      uint8_t *bytes = reinterpret_cast<uint8_t *>(&svmRes);
+
+      Json::Value res;
+      res["email_verefication_token"] = utils::base64Encode(bytes, 8);
+
+      co_return ResponseHandler::success(request, Codes::Success::REGISTRATION_SUCCESS, res);
+    } catch (const RequestCheck::ValidationError &error) {
+      co_return error.response;
+    } catch (const std::exception &ex) {
+      co_return ResponseHandler::error(request, "Unexpected error: " + std::string(ex.what()), Codes::Error::USER_CREATION_FAILED);
+    }
+  }
+
+  Task<HttpResponsePtr> refreshPasswordEndpoint(HttpRequestPtr request) {
+    try {
+      const Json::Value *json = RequestCheck::requireJson(request);
+      std::string password = RequestCheck::requireString(request, *json, "password");
+
+      UsersClient client;
+      std::string type = request->getHeader("eauth-type");
+      if (type == "user") {
+        std::string id = request->getHeader("eauth-user-id");
+        if (id.empty()) {
+          co_return ResponseHandler::error(request, "userid not exists", Codes::Error::INTERNAL_ERROR);
+        }
+
+        std::string hash_password = hashPassword(password);
+        if (hash_password.empty()) {
+          co_return ResponseHandler::error(request, "Failed to hash password", Codes::Error::INTERNAL_ERROR);
+        }
+
+        auto response = co_await client.updatePassword(id, hash_password);
+        if (std::holds_alternative<HttpError>(response)) {
+          co_return ResponseHandler::error(request, "Error while changing password", Codes::Error::AUTH_FAILED);
+        }
+
+        co_return ResponseHandler::success(request, "Changed password", Codes::Success::AUTH_SUCCESS);
+      }
+      if (type != "guest") {
+        co_return ResponseHandler::error(request, "Incorrect auth type", Codes::Error::AUTH_FAILED);
+      }
+
+      std::string login_or_email = RequestCheck::requireString(request, *json, "login_or_email");
+
+      UUID userId;
+      if (login_or_email.contains('@'))
+        userId = UUID::fromString((co_await Repository::IntegrationRepo::getUserIdByEmail(login_or_email))->userId);
+      else {
+        auto response = co_await client.getUserById(login_or_email);
+        if (std::holds_alternative<HttpError>(response)) {
+          co_return ResponseHandler::error(request, "Error while changing password", Codes::Error::AUTH_FAILED);
+        }
+
+        UserResponseDto user = std::get<UserResponseDto>(response);
+        userId = UUID::fromString(user.data.id);
+      }
+
+      ConfirmationPandingEmailVereficationPending cpevp;
+      cpevp.userId = userId;
+      cpevp.type = ConfirmationPandingEmailVereficationPending::Type::RefreshPassword;
+
+      std::string hash_password = hashPassword(password);
+      if (hash_password.empty()) {
+        co_return ResponseHandler::error(request, "Failed to hash password", Codes::Error::INTERNAL_ERROR);
+      }
+      cpevp.password = hash_password;
 
       uint64_t svmRes = co_await sendVereficationMail(cpevp);
       uint8_t *bytes = reinterpret_cast<uint8_t *>(&svmRes);
