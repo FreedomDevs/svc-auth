@@ -178,30 +178,61 @@ public:
       std::string login = RequestCheck::requireString(request, *json, "login");
       std::string password = RequestCheck::requireString(request, *json, "password");
 
-      UsersClient usersClient;
       std::string clientIp = getClientIp(request);
 
-      // Получаем информацию о игроке, включая его пароль
-      auto userCheckResult = co_await usersClient.getUserById(login, true);
-      if (std::holds_alternative<HttpError>(userCheckResult)) {
-        auto err = std::get<HttpError>(userCheckResult);
-        if (err.httpStatus == 404) {
+      UUID userId;
+      std::string passwordHash;
+      if (login.contains('@')) {
+        auto integration = co_await Repository::IntegrationRepo::getUserIdByEmail(login);
+        if (!integration) {
           co_return ResponseHandler::error(request, "User not found", Codes::Error::USER_NOT_FOUND);
         }
-        co_return ResponseHandler::error(request, "Error checking user existence: " + err.message, Codes::Error::AUTH_FAILED);
-      }
-      UserResponseDto user = std::get<UserResponseDto>(userCheckResult);
 
-      if (!user.data.passwordHash) {
-        throw std::logic_error("Password hash is null");
+        userId = UUID::fromString(integration->userId);
+
+        UsersClient usersClient;
+        auto userCheckResult = co_await usersClient.getUserById(userId.toString(), true);
+        if (std::holds_alternative<HttpError>(userCheckResult)) {
+          auto err = std::get<HttpError>(userCheckResult);
+          if (err.httpStatus == 404) {
+            co_return ResponseHandler::error(request, "User not found", Codes::Error::USER_NOT_FOUND);
+          }
+          co_return ResponseHandler::error(request, "Error checking user existence: " + err.message, Codes::Error::AUTH_FAILED);
+        }
+        UserResponseDto user = std::get<UserResponseDto>(userCheckResult);
+
+        if (!user.data.passwordHash) {
+          throw std::logic_error("Password hash is null");
+        }
+        passwordHash = *user.data.passwordHash;
+      } else {
+
+        // Получаем информацию о игроке, включая его пароль
+        UsersClient usersClient;
+        auto userCheckResult = co_await usersClient.getUserById(login, true);
+        if (std::holds_alternative<HttpError>(userCheckResult)) {
+          auto err = std::get<HttpError>(userCheckResult);
+          if (err.httpStatus == 404) {
+            co_return ResponseHandler::error(request, "User not found", Codes::Error::USER_NOT_FOUND);
+          }
+          co_return ResponseHandler::error(request, "Error checking user existence: " + err.message, Codes::Error::AUTH_FAILED);
+        }
+        UserResponseDto user = std::get<UserResponseDto>(userCheckResult);
+
+        userId = UUID::fromString(user.data.id);
+
+        if (!user.data.passwordHash) {
+          throw std::logic_error("Password hash is null");
+        }
+        passwordHash = *user.data.passwordHash;
       }
 
-      if (!verifyPassword(*user.data.passwordHash, password)) {
+      if (!verifyPassword(passwordHash, password)) {
         LOG_INFO << "[AUTH][LOGIN_FAILED] login=" << login << " ip=" << clientIp;
         co_return ResponseHandler::error(request, "Password invalid", Codes::Error::PASSWORD_INVALID);
       }
 
-      std::optional<Repository::Integration> userIntegrations = co_await Repository::IntegrationRepo::getByUserId(user.data.id);
+      std::optional<Repository::Integration> userIntegrations = co_await Repository::IntegrationRepo::getByUserId(userId.toString());
 
       // Блок отвечяет за поврторный логин если Email не указан (требует передачи email в data)
       if (!userIntegrations || !userIntegrations->email) {
@@ -213,7 +244,7 @@ public:
 
         ConfirmationPandingEmailVereficationPending cpevp;
 
-        cpevp.userId = UUID::fromString(user.data.id);
+        cpevp.userId = userId;
         cpevp.email = email;
         cpevp.login = login;
         cpevp.type = ConfirmationPandingEmailVereficationPending::Type::Login;
@@ -232,7 +263,7 @@ public:
       utils::secureRandomBytes(refreshData.data(), refreshData.size());
       auto refreshTokenHash = getRefreshTokenHash(refreshData);
 
-      bool result = co_await Repository::RefreshTokenRepo::save(UUID::fromString(user.data.id), refreshTokenHash, 30 * 24 * 60 * 60);
+      bool result = co_await Repository::RefreshTokenRepo::save(userId, refreshTokenHash, 30 * 24 * 60 * 60);
       if (!result) {
         throw std::runtime_error("Не удалось сохранить refresh token");
       }
@@ -242,7 +273,7 @@ public:
       Json::Value res;
       res["refresh_token"] = refreshToken;
 
-      LOG_INFO << "[AUTH][LOGIN_SUCCESS] login=" << login << " userId=" << user.data.id << " ip=" << clientIp;
+      LOG_INFO << "[AUTH][LOGIN_SUCCESS] login=" << login << " userId=" << userId.toString() << " ip=" << clientIp;
       co_return ResponseHandler::success(request, Codes::Success::AUTH_SUCCESS, res);
     } catch (const RequestCheck::ValidationError &error) {
       co_return error.response;
